@@ -9,6 +9,17 @@
 #   - Environment variables: Prefix with BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_
 #
 # Precedence (lowest to highest): defaults → app → host → user → dotenv → env
+#
+# IMPORTANT: Environment Variable Naming Convention
+# -------------------------------------------------
+# Environment variables use underscores as separators:
+#   - Triple underscore (___) separates PREFIX from SECTION
+#   - Double underscore (__) separates SECTION from KEY
+#
+# Format: <PREFIX>___<SECTION>__<KEY>=value
+# Example: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__FROM_ADDRESS=alerts@example.com
+#
+# This allows unambiguous parsing of nested configuration structures.
 
 # ==============================================================================
 # Email Configuration - SMTP settings for sending notifications
@@ -16,7 +27,7 @@
 #
 # Documentation: Uses btx_lib_mail for SMTP functionality
 # Settings can be overridden via lib_layered_config precedence chain
-# Environment variables: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_*
+# Environment variables: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__*
 #
 # Sensible defaults are applied by the email wrapper.
 # Uncomment and modify any setting below to override the defaults.
@@ -27,7 +38,7 @@
 # Purpose: SMTP servers to use for email delivery (tried in order)
 # Type: array of strings in "host[:port]" format
 # Default: [] (empty, must be configured to send email)
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_HOSTS
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_HOSTS
 # Note: Port 587 is standard for STARTTLS, 465 for implicit TLS, 25 for plain
 # Example: smtp_hosts = ["smtp.gmail.com:587", "smtp.backup.com:587"]
 
@@ -35,14 +46,14 @@
 # Purpose: Default sender address for outgoing emails
 # Type: string (valid email address)
 # Default: "noreply@localhost"
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_FROM_ADDRESS
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__FROM_ADDRESS
 # Example: from_address = "alerts@example.com"
 
 # smtp_username = ""
 # Purpose: SMTP authentication username
 # Type: string or None
 # Default: None (no authentication)
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_USERNAME
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_USERNAME
 # Note: Both username and password must be set to enable authentication
 # Example: smtp_username = "user@example.com"
 
@@ -50,7 +61,7 @@
 # Purpose: SMTP authentication password
 # Type: string or None
 # Default: None (no authentication)
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_PASSWORD
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_PASSWORD
 # Security: Store in environment variable or user config, not in defaults
 # Example: Set via environment variable for security
 
@@ -58,7 +69,7 @@
 # Purpose: Enable STARTTLS negotiation before authentication
 # Type: boolean
 # Default: true
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_USE_STARTTLS
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__USE_STARTTLS
 # Note: Standard for port 587; disable for implicit TLS (port 465)
 # Example: use_starttls = false
 
@@ -66,14 +77,14 @@
 # Purpose: Socket timeout in seconds for SMTP operations
 # Type: float
 # Default: 30.0
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_TIMEOUT
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__TIMEOUT
 # Example: timeout = 60.0
 
 # raise_on_missing_attachments = true
 # Purpose: Behavior when attachment files are missing
 # Type: boolean
 # Default: true (raise FileNotFoundError)
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_RAISE_ON_MISSING_ATTACHMENTS
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__RAISE_ON_MISSING_ATTACHMENTS
 # Note: When false, logs warning and continues without attachment
 # Example: raise_on_missing_attachments = false
 
@@ -81,7 +92,7 @@
 # Purpose: Behavior when recipient email addresses are invalid
 # Type: boolean
 # Default: true (raise ValueError)
-# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_RAISE_ON_INVALID_RECIPIENT
+# Environment: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__RAISE_ON_INVALID_RECIPIENT
 # Note: When false, logs warning and skips invalid addresses
 # Example: raise_on_invalid_recipient = true
 
@@ -108,16 +119,16 @@
 #   Use these for runtime overrides (e.g., in CI/CD, debugging).
 #
 # Method 2: lib_layered_config environment variables
-#   BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_LIB_LOG_RICH_CONSOLE_LEVEL=DEBUG
-#   BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_LIB_LOG_RICH_ENABLE_GRAYLOG=true
+#   BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___LIB_LOG_RICH__CONSOLE_LEVEL=DEBUG
+#   BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___LIB_LOG_RICH__ENABLE_GRAYLOG=true
 #   etc.
 #
-#   Format: BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_<section>_<setting>
+#   Format: <PREFIX>___<SECTION>__<KEY>=value
 #   These are merged via lib_layered_config before init().
 #
 # Precedence (lowest to highest):
 #   defaults → app config → host config → user config → .env file →
-#   BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_* env vars → LOG_* env vars
+#   BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___* env vars → LOG_* env vars
 #
 # Recommendation: Use LOG_* for simplicity and maximum precedence
 #

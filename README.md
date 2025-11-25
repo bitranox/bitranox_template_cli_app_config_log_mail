@@ -88,13 +88,18 @@ The application includes email sending capabilities via [btx-lib-mail](https://p
 Configure email settings via environment variables, `.env` file, or configuration files:
 
 **Environment Variables:**
+
+Environment variables use the format: `<PREFIX>___<SECTION>__<KEY>=value`
+- Triple underscore (`___`) separates PREFIX from SECTION
+- Double underscore (`__`) separates SECTION from KEY
+
 ```bash
-export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_HOSTS="smtp.gmail.com:587,smtp.backup.com:587"
-export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_FROM_ADDRESS="alerts@myapp.com"
-export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_USERNAME="your-email@gmail.com"
-export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_PASSWORD="your-app-password"
-export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_USE_STARTTLS="true"
-export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_TIMEOUT="60.0"
+export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_HOSTS="smtp.gmail.com:587,smtp.backup.com:587"
+export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__FROM_ADDRESS="alerts@myapp.com"
+export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_USERNAME="your-email@gmail.com"
+export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_PASSWORD="your-app-password"
+export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__USE_STARTTLS="true"
+export BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__TIMEOUT="60.0"
 ```
 
 **Configuration File** (`~/.config/bitranox-template-cli-app-config-log/config.toml`):
@@ -111,8 +116,8 @@ timeout = 60.0
 **`.env` File:**
 ```bash
 # Email configuration for local testing
-BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_HOSTS=smtp.gmail.com:587
-BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_FROM_ADDRESS=noreply@example.com
+BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_HOSTS=smtp.gmail.com:587
+BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__FROM_ADDRESS=noreply@example.com
 ```
 
 #### Gmail Configuration Example
@@ -120,10 +125,10 @@ BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_FROM_ADDRESS=noreply@example.com
 For Gmail, create an [App Password](https://support.google.com/accounts/answer/185833) instead of using your account password:
 
 ```bash
-BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_HOSTS=smtp.gmail.com:587
-BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_FROM_ADDRESS=your-email@gmail.com
-BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_USERNAME=your-email@gmail.com
-BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_SMTP_PASSWORD=your-16-char-app-password
+BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_HOSTS=smtp.gmail.com:587
+BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__FROM_ADDRESS=your-email@gmail.com
+BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_USERNAME=your-email@gmail.com
+BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___EMAIL__SMTP_PASSWORD=your-16-char-app-password
 ```
 
 #### Send Simple Email
@@ -288,8 +293,11 @@ LOG_ENABLE_GRAYLOG=true LOG_GRAYLOG_ENDPOINT="logs.example.com:12201" bitranox-t
 ```
 
 **Method 2: Application-prefixed variables**
+
+Format: `<PREFIX>___<SECTION>__<KEY>=value`
+
 ```bash
-BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_LIB_LOG_RICH_CONSOLE_LEVEL=DEBUG bitranox-template-cli-app-config-log hello
+BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL___LIB_LOG_RICH__CONSOLE_LEVEL=DEBUG bitranox-template-cli-app-config-log hello
 ```
 
 #### .env File Support
