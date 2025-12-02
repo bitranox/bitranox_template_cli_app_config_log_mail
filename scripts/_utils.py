@@ -1,22 +1,19 @@
 """Shared automation utilities for project scripts.
 
-Purpose
--------
 Collect helper functions used by the ``scripts/`` entry points (build, test,
-release) so git helpers and subprocess wrappers live in one place. The behaviour mirrors the operational guidance described in
-``docs/systemdesign/module_reference.md`` and ``DEVELOPMENT.md``.
+release) so git helpers and subprocess wrappers live in one place. The behaviour
+mirrors the operational guidance described in ``docs/systemdesign/module_reference.md``
+and ``DEVELOPMENT.md``.
 
-Contents
---------
-* ``run`` – subprocess wrapper returning structured results.
-* Metadata helpers (``get_project_metadata`` et al.) for build/test automation.
-* GitHub release helpers and subprocess utilities.
+Contents:
+    * ``run`` – subprocess wrapper returning structured results.
+    * Metadata helpers (``get_project_metadata`` et al.) for build/test automation.
+    * GitHub release helpers and subprocess utilities.
 
-System Role
------------
-Provides the scripting boundary of the clean architecture: the core library
-remains framework-agnostic while operational scripts reuse these helpers to
-avoid duplication and keep CI/CD behaviour consistent with documentation.
+System Role:
+    Provides the scripting boundary of the clean architecture: the core library
+    remains framework-agnostic while operational scripts reuse these helpers to
+    avoid duplication and keep CI/CD behaviour consistent with documentation.
 """
 
 from __future__ import annotations
@@ -83,13 +80,12 @@ class ProjectMetadata:
         return ""
 
     def resolve_cli_entry(self) -> tuple[str, str, str | None] | None:
-        """Return ``(script_name, module, attr)`` for the preferred CLI entry point.
+        """Return (script_name, module, attr) for the preferred CLI entry point.
 
-        Resolution strategy keeps ``pyproject.toml`` as the single source of truth:
+        Resolution strategy keeps pyproject.toml as the single source of truth:
         prefer scripts whose name matches the project slug/name/import package and
         fall back to the first declared script.
         """
-
         if not self.scripts:
             return None
         candidates = (
@@ -102,7 +98,6 @@ class ProjectMetadata:
 
     def diagnostic_lines(self) -> tuple[str, ...]:
         """Return human-friendly lines that summarise project metadata."""
-
         summary = [
             f"name={self.name}",
             f"slug={self.slug}",
@@ -124,21 +119,15 @@ _toml_module: Any = None
 def _get_toml_module() -> Any:
     """Return tomllib (Python 3.11+) or tomli backport (Python 3.9-3.10).
 
-    Purpose
-    -------
     Ensure TOML parsing works across Python 3.9+ by using the standard
     library tomllib on 3.11+ and falling back to the tomli package
     on earlier versions.
 
-    Returns
-    -------
-    module
+    Returns:
         Either tomllib or tomli with identical interfaces.
 
-    Raises
-    ------
-    ModuleNotFoundError
-        If neither tomllib nor tomli can be imported.
+    Raises:
+        ModuleNotFoundError: If neither tomllib nor tomli can be imported.
     """
     global _toml_module
     if _toml_module is not None:
@@ -213,7 +202,6 @@ def _package_name_to_display(value: str) -> str:
 
 def _as_str_mapping(value: object) -> dict[str, object]:
     """Return a shallow copy of mapping entries with string keys."""
-
     result: dict[str, object] = {}
     if isinstance(value, dict):
         mapping = cast(dict[object, object], value)
@@ -225,7 +213,6 @@ def _as_str_mapping(value: object) -> dict[str, object]:
 
 def _as_str_dict(value: object) -> dict[str, str]:
     """Return a mapping containing only string keys and string values."""
-
     result: dict[str, str] = {}
     if isinstance(value, dict):
         mapping = cast(dict[object, object], value)
@@ -237,7 +224,6 @@ def _as_str_dict(value: object) -> dict[str, str]:
 
 def _as_sequence(value: object) -> tuple[object, ...]:
     """Return a tuple for list/tuple values, otherwise an empty tuple."""
-
     if isinstance(value, (list, tuple)):
         sequence = cast(Sequence[object], value)
         return tuple(sequence)
@@ -584,18 +570,16 @@ LAYEREDCONF_SLUG: str = {_quote(project.shell_command)}
 def print_info() -> None:
     """Print the summarised metadata block used by the CLI ``info`` command.
 
-    Why
-        Provides a single, auditable rendering function so documentation and
-        CLI output always match the system design reference.
+    Provides a single, auditable rendering function so documentation and
+    CLI output always match the system design reference.
 
-    Side Effects
+    Side Effects:
         Writes to ``stdout``.
 
-    Examples
-    --------
-    >>> print_info()  # doctest: +ELLIPSIS
-    Info for {project.name}:
-    ...
+    Example:
+        >>> print_info()  # doctest: +ELLIPSIS
+        Info for {project.name}:
+        ...
     """
 
     fields = [
@@ -617,7 +601,6 @@ def print_info() -> None:
 
 def sync_metadata_module(project: ProjectMetadata) -> None:
     """Write ``__init__conf__.py`` so the constants mirror ``pyproject.toml``."""
-
     content = _render_metadata_module(project)
     module_path = project.metadata_module
     module_path.parent.mkdir(parents=True, exist_ok=True)

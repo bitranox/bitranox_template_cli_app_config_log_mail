@@ -15,11 +15,13 @@ TARGET_FIELDS = ("name", "title", "version", "homepage", "author", "author_email
 
 
 def _load_pyproject() -> dict[str, Any]:
+    """Load and parse pyproject.toml from the project root."""
     with PYPROJECT_PATH.open("rb") as stream:
         return tomllib.load(stream)
 
 
 def _resolve_init_conf_path(pyproject: dict[str, Any]) -> Path:
+    """Locate the __init__conf__.py file based on pyproject.toml configuration."""
     project_table = cast(dict[str, Any], pyproject["project"])
     tool_table = cast(dict[str, Any], pyproject.get("tool", {}))
     hatch_table = cast(dict[str, Any], tool_table.get("hatch", {}))
@@ -41,6 +43,7 @@ def _resolve_init_conf_path(pyproject: dict[str, Any]) -> Path:
 
 
 def _load_init_conf_metadata(init_conf_path: Path) -> dict[str, str]:
+    """Extract metadata field assignments from __init__conf__.py."""
     fragments: list[str] = []
     for raw_line in init_conf_path.read_text(encoding="utf-8").splitlines():
         stripped = raw_line.strip()
@@ -58,11 +61,13 @@ def _load_init_conf_metadata(init_conf_path: Path) -> dict[str, str]:
 
 
 def _load_init_conf_module(init_conf_path: Path) -> dict[str, Any]:
+    """Execute __init__conf__.py and return its namespace dict."""
     return runpy.run_path(str(init_conf_path))
 
 
 @pytest.mark.os_agnostic
 def test_when_print_info_runs_it_lists_every_field(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify print_info outputs all target metadata fields."""
     pyproject = _load_pyproject()
     init_conf_path = _resolve_init_conf_path(pyproject)
     init_conf_module = _load_init_conf_module(init_conf_path)
@@ -80,6 +85,7 @@ def test_when_print_info_runs_it_lists_every_field(capsys: pytest.CaptureFixture
 
 @pytest.mark.os_agnostic
 def test_the_metadata_constants_match_the_project() -> None:
+    """Verify __init__conf__.py metadata matches pyproject.toml values."""
     pyproject = _load_pyproject()
     project_table = cast(dict[str, Any], pyproject["project"])
     init_conf_path = _resolve_init_conf_path(pyproject)

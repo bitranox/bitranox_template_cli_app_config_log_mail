@@ -45,18 +45,16 @@ LAYEREDCONF_SLUG: str = "bitranox-template-cli-app-config-log-mail"
 def print_info() -> None:
     """Print the summarised metadata block used by the CLI ``info`` command.
 
-    Why
-        Provides a single, auditable rendering function so documentation and
-        CLI output always match the system design reference.
+    Provides a single, auditable rendering function so documentation and
+    CLI output always match the system design reference.
 
-    Side Effects
+    Side Effects:
         Writes to ``stdout``.
 
-    Examples
-    --------
-    >>> print_info()  # doctest: +ELLIPSIS
-    Info for bitranox_template_cli_app_config_log_mail:
-    ...
+    Example:
+        >>> print_info()  # doctest: +ELLIPSIS
+        Info for bitranox_template_cli_app_config_log_mail:
+        ...
     """
 
     fields = [

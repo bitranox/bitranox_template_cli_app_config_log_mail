@@ -1,7 +1,5 @@
 """Tests for email sending functionality.
 
-Purpose
--------
 Verify that the mail wrapper correctly integrates btx_lib_mail with the
 application's configuration system and provides a clean interface for
 email operations.

@@ -1,3 +1,5 @@
+"""Create git tags and GitHub releases for versioned deployments."""
+
 from __future__ import annotations
 
 import re
@@ -31,6 +33,7 @@ _DEFAULT_REMOTE = get_default_remote()
 
 
 def release(*, remote: str = _DEFAULT_REMOTE) -> None:
+    """Create a versioned release with git tag and GitHub release."""
     version = read_version_from_pyproject(Path("pyproject.toml"))
     if not version or not _looks_like_semver(version):
         raise SystemExit("[release] Could not read version X.Y.Z from pyproject.toml")

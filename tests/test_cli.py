@@ -19,18 +19,12 @@ from bitranox_template_cli_app_config_log_mail import __init__conf__
 class CapturedRun:
     """Record of a single ``lib_cli_exit_tools.run_cli`` invocation.
 
-    Attributes
-    ----------
-    command:
-        Command object passed to ``run_cli``.
-    argv:
-        Argument vector forwarded to the command, when any.
-    prog_name:
-        Program name announced in the help output.
-    signal_specs:
-        Signal handlers registered by the runner.
-    install_signals:
-        ``True`` when the runner installed default signal handlers.
+    Attributes:
+        command: Command object passed to ``run_cli``.
+        argv: Argument vector forwarded to the command, when any.
+        prog_name: Program name announced in the help output.
+        signal_specs: Signal handlers registered by the runner.
+        install_signals: ``True`` when the runner installed default signal handlers.
     """
 
     command: Any
@@ -41,19 +35,16 @@ class CapturedRun:
 
 
 def _capture_run_cli(target: list[CapturedRun]) -> Callable[..., int]:
-    """Return a stub that records ``lib_cli_exit_tools.run_cli`` invocations.
+    """Return a stub that records lib_cli_exit_tools.run_cli invocations.
 
-    Why
-        Tests assert that the CLI delegates to ``lib_cli_exit_tools`` with the
-        expected arguments; recording each call keeps those assertions readable.
+    Tests assert that the CLI delegates to lib_cli_exit_tools with the
+    expected arguments; recording each call keeps those assertions readable.
 
-    Inputs
-        target:
-            Mutable list that will collect :class:`CapturedRun` entries.
+    Args:
+        target: Mutable list that will collect CapturedRun entries.
 
-    Outputs
-        Callable[..., int]:
-            Replacement for ``lib_cli_exit_tools.run_cli``.
+    Returns:
+        Replacement callable for lib_cli_exit_tools.run_cli.
     """
 
     def _run(
@@ -80,11 +71,13 @@ def _capture_run_cli(target: list[CapturedRun]) -> Callable[..., int]:
 
 @pytest.mark.os_agnostic
 def test_when_we_snapshot_traceback_the_initial_state_is_quiet(isolated_traceback_config: None) -> None:
+    """Verify snapshot_traceback_state returns (False, False) initially."""
     assert cli_mod.snapshot_traceback_state() == (False, False)
 
 
 @pytest.mark.os_agnostic
 def test_when_we_enable_traceback_the_config_sings_true(isolated_traceback_config: None) -> None:
+    """Verify apply_traceback_preferences enables traceback flags."""
     cli_mod.apply_traceback_preferences(True)
 
     assert lib_cli_exit_tools.config.traceback is True
@@ -93,6 +86,7 @@ def test_when_we_enable_traceback_the_config_sings_true(isolated_traceback_confi
 
 @pytest.mark.os_agnostic
 def test_when_we_restore_traceback_the_config_whispers_false(isolated_traceback_config: None) -> None:
+    """Verify restore_traceback_state resets traceback flags to previous values."""
     previous = cli_mod.snapshot_traceback_state()
     cli_mod.apply_traceback_preferences(True)
 
@@ -108,6 +102,7 @@ def test_when_info_runs_with_traceback_the_choice_is_shared(
     isolated_traceback_config: None,
     preserve_traceback_state: None,
 ) -> None:
+    """Verify traceback flag is active during info command then restored."""
     notes: list[tuple[bool, bool]] = []
 
     def record() -> None:
@@ -130,6 +125,7 @@ def test_when_info_runs_with_traceback_the_choice_is_shared(
 
 @pytest.mark.os_agnostic
 def test_when_main_is_called_it_delegates_to_run_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify main() delegates to lib_cli_exit_tools.run_cli with correct args."""
     ledger: list[CapturedRun] = []
     monkeypatch.setattr(lib_cli_exit_tools, "run_cli", _capture_run_cli(ledger))
 
@@ -152,6 +148,7 @@ def test_when_cli_runs_without_arguments_help_is_printed(
     monkeypatch: pytest.MonkeyPatch,
     cli_runner: CliRunner,
 ) -> None:
+    """Verify CLI with no arguments displays help text."""
     calls: list[str] = []
 
     def remember() -> None:
@@ -172,6 +169,7 @@ def test_when_main_receives_no_arguments_cli_main_is_exercised(
     cli_runner: CliRunner,
     isolated_traceback_config: None,
 ) -> None:
+    """Verify main with no args exercises CLI and shows help."""
     calls: list[str] = []
     outputs: list[str] = []
 
@@ -209,6 +207,7 @@ def test_when_traceback_is_requested_without_command_the_domain_runs(
     monkeypatch: pytest.MonkeyPatch,
     cli_runner: CliRunner,
 ) -> None:
+    """Verify --traceback without command runs noop_main."""
     calls: list[str] = []
 
     def remember() -> None:
@@ -229,6 +228,7 @@ def test_when_traceback_flag_is_passed_the_full_story_is_printed(
     capsys: pytest.CaptureFixture[str],
     strip_ansi: Callable[[str], str],
 ) -> None:
+    """Verify --traceback displays full exception traceback on failure."""
     exit_code = cli_mod.main(["--traceback", "fail"])
 
     plain_err = strip_ansi(capsys.readouterr().err)
@@ -243,6 +243,7 @@ def test_when_traceback_flag_is_passed_the_full_story_is_printed(
 
 @pytest.mark.os_agnostic
 def test_when_hello_is_invoked_the_cli_smiles(cli_runner: CliRunner) -> None:
+    """Verify hello command outputs Hello World greeting."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["hello"])
 
     assert result.exit_code == 0
@@ -251,6 +252,7 @@ def test_when_hello_is_invoked_the_cli_smiles(cli_runner: CliRunner) -> None:
 
 @pytest.mark.os_agnostic
 def test_when_fail_is_invoked_the_cli_raises(cli_runner: CliRunner) -> None:
+    """Verify fail command raises RuntimeError."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["fail"])
 
     assert result.exit_code != 0
@@ -259,6 +261,7 @@ def test_when_fail_is_invoked_the_cli_raises(cli_runner: CliRunner) -> None:
 
 @pytest.mark.os_agnostic
 def test_when_info_is_invoked_the_metadata_is_displayed(cli_runner: CliRunner) -> None:
+    """Verify info command displays project metadata."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["info"])
 
     assert result.exit_code == 0
@@ -268,6 +271,7 @@ def test_when_info_is_invoked_the_metadata_is_displayed(cli_runner: CliRunner) -
 
 @pytest.mark.os_agnostic
 def test_when_config_is_invoked_it_displays_configuration(cli_runner: CliRunner) -> None:
+    """Verify config command displays configuration."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["config"])
 
     assert result.exit_code == 0
@@ -276,6 +280,7 @@ def test_when_config_is_invoked_it_displays_configuration(cli_runner: CliRunner)
 
 @pytest.mark.os_agnostic
 def test_when_config_is_invoked_with_json_format_it_outputs_json(cli_runner: CliRunner) -> None:
+    """Verify config --format json outputs JSON."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--format", "json"])
 
     assert result.exit_code == 0
@@ -285,6 +290,7 @@ def test_when_config_is_invoked_with_json_format_it_outputs_json(cli_runner: Cli
 
 @pytest.mark.os_agnostic
 def test_when_config_is_invoked_with_nonexistent_section_it_fails(cli_runner: CliRunner) -> None:
+    """Verify config with nonexistent section returns error."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--section", "nonexistent_section_that_does_not_exist"])
 
     assert result.exit_code != 0
@@ -296,6 +302,7 @@ def test_when_config_is_invoked_with_mocked_data_it_displays_sections(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify config displays sections from mocked configuration."""
     from lib_layered_config import Config
 
     # Create a mock Config with test data
@@ -523,6 +530,7 @@ def test_when_config_shows_all_sections_with_complex_values(
 
 @pytest.mark.os_agnostic
 def test_when_config_deploy_is_invoked_without_target_it_fails(cli_runner: CliRunner) -> None:
+    """Verify config-deploy without --target option fails."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["config-deploy"])
 
     assert result.exit_code != 0
@@ -535,6 +543,7 @@ def test_when_config_deploy_is_invoked_it_deploys_configuration(
     tmp_path: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify config-deploy creates configuration files."""
     from pathlib import Path
 
     # Mock deploy_configuration to return a test path without actually deploying
@@ -559,6 +568,7 @@ def test_when_config_deploy_finds_no_files_to_create_it_informs_user(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify config-deploy reports when no files are created."""
     from pathlib import Path
 
     def mock_deploy(*, targets: Any, force: bool = False) -> list[Path]:
@@ -578,6 +588,8 @@ def test_when_config_deploy_encounters_permission_error_it_handles_gracefully(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify config-deploy handles PermissionError gracefully."""
+
     def mock_deploy(*, targets: Any, force: bool = False) -> list[Any]:
         raise PermissionError("Permission denied")
 
@@ -596,6 +608,7 @@ def test_when_config_deploy_supports_multiple_targets(
     tmp_path: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify config-deploy accepts multiple --target options."""
     from pathlib import Path
 
     path1 = tmp_path / "config1.toml"
@@ -620,6 +633,7 @@ def test_when_config_deploy_supports_multiple_targets(
 
 @pytest.mark.os_agnostic
 def test_when_an_unknown_command_is_used_a_helpful_error_appears(cli_runner: CliRunner) -> None:
+    """Verify unknown command shows No such command error."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["does-not-exist"])
 
     assert result.exit_code != 0
@@ -631,6 +645,7 @@ def test_when_restore_is_disabled_the_traceback_choice_remains(
     isolated_traceback_config: None,
     preserve_traceback_state: None,
 ) -> None:
+    """Verify restore_traceback=False keeps traceback flags enabled."""
     cli_mod.apply_traceback_preferences(False)
 
     cli_mod.main(["--traceback", "hello"], restore_traceback=False)

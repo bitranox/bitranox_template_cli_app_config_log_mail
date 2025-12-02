@@ -1,3 +1,5 @@
+"""Tests for scripts automation wrappers."""
+
 from __future__ import annotations
 
 from click.testing import CliRunner
@@ -25,6 +27,8 @@ ModuleLike = ModuleType | SimpleNamespace
 
 
 class RecordedOptions(TypedDict):
+    """Execution options passed to the run stub."""
+
     check: bool
     capture: bool
     cwd: str | None
@@ -36,12 +40,9 @@ class RecordedOptions(TypedDict):
 class RecordedRun:
     """Single invocation captured from a scripts command execution.
 
-    Attributes
-    ----------
-    command:
-        Command list or shell string passed to the automation runner.
-    options:
-        Keyword arguments controlling execution (capture, cwd, etc.).
+    Attributes:
+        command: Command list or shell string passed to the automation runner.
+        options: Keyword arguments controlling execution (capture, cwd, etc.).
     """
 
     command: RunCommand
@@ -49,6 +50,8 @@ class RecordedRun:
 
 
 class RunStub(Protocol):
+    """Protocol for the run function stub used in tests."""
+
     def __call__(
         self,
         cmd: RunCommand,
@@ -58,22 +61,22 @@ class RunStub(Protocol):
         cwd: str | None = None,
         env: Mapping[str, str] | None = None,
         dry_run: bool = False,
-    ) -> RunResult: ...
+    ) -> RunResult:
+        """Execute or record a command invocation."""
+        ...
 
 
 def _remember_runs(history: list[RecordedRun]) -> RunStub:
-    """Return a runner stub that appends every invocation to ``history``.
+    """Return a runner stub that appends every invocation to history.
 
-    Why
-        Tests need to inspect the commands executed by automation wrappers
-        without launching real subprocesses.
+    Tests need to inspect the commands executed by automation wrappers
+    without launching real subprocesses.
 
-    Inputs
-        history:
-            Mutable list collecting :class:`RecordedRun` entries.
+    Args:
+        history: Mutable list collecting RecordedRun entries.
 
-    Outputs
-        RunStub: Callable mimicking ``scripts._utils.run``.
+    Returns:
+        Callable mimicking scripts._utils.run.
     """
 
     def _run(
@@ -105,19 +108,15 @@ def _remember_runs(history: list[RecordedRun]) -> RunStub:
 def _commands_as_text(runs: list[RecordedRun]) -> list[str]:
     """Render every recorded command as a single string.
 
-    Why
-        Simplifies assertions that look for substrings inside the recorded
-        commands.
+    Simplifies assertions that look for substrings inside the recorded
+    commands.
 
-    Inputs
-        runs:
-            Sequence of recorded invocations.
+    Args:
+        runs: Sequence of recorded invocations.
 
-    Outputs
-        list[str]:
-            Normalised textual commands.
+    Returns:
+        Normalised textual commands.
     """
-
     rendered: list[str] = []
     for run in runs:
         command = run.command
@@ -131,22 +130,21 @@ def _commands_as_text(runs: list[RecordedRun]) -> list[str]:
 def _first_command(runs: list[RecordedRun]) -> RunCommand:
     """Return the command associated with the first recorded run.
 
-    Why
-        Several tests only care about the inaugural command executed by the
-        automation wrapper; this helper keeps that intent obvious.
+    Several tests only care about the inaugural command executed by the
+    automation wrapper; this helper keeps that intent obvious.
 
-    Inputs
-        runs:
-            Recorded run list populated by :func:`_remember_runs`.
+    Args:
+        runs: Recorded run list populated by _remember_runs.
 
-    Outputs
-        RunCommand: the first command issued.
+    Returns:
+        The first command issued.
     """
-
     return runs[0].command
 
 
 def _capture_sync(record: list[ProjectMetadata]) -> Callable[[ProjectMetadata], None]:
+    """Return a sync stub that records metadata sync invocations."""
+
     def _sync(project: ProjectMetadata) -> None:
         record.append(project)
 
@@ -154,7 +152,8 @@ def _capture_sync(record: list[ProjectMetadata]) -> Callable[[ProjectMetadata], 
 
 
 @pytest.mark.os_agnostic
-def test_get_project_metadata_fields():
+def test_get_project_metadata_fields() -> None:
+    """Verify get_project_metadata returns expected fields."""
     meta = _utils.get_project_metadata()
     assert meta.name == "bitranox_template_cli_app_config_log_mail"
     assert meta.slug == "bitranox-template-cli-app-config-log-mail"
@@ -169,6 +168,7 @@ def test_get_project_metadata_fields():
 
 @pytest.mark.os_agnostic
 def test_build_script_uses_metadata(monkeypatch: MonkeyPatch) -> None:
+    """Verify build script invokes python -m build."""
     recorded: list[RecordedRun] = []
     synced: list[ProjectMetadata] = []
     monkeypatch.setattr(build, "run", _remember_runs(recorded))
@@ -182,6 +182,7 @@ def test_build_script_uses_metadata(monkeypatch: MonkeyPatch) -> None:
 
 @pytest.mark.os_agnostic
 def test_dev_script_installs_dev_extras(monkeypatch: MonkeyPatch) -> None:
+    """Verify dev script installs package with dev extras."""
     recorded: list[RecordedRun] = []
     synced: list[ProjectMetadata] = []
     monkeypatch.setattr(dev, "run", _remember_runs(recorded))
@@ -196,6 +197,7 @@ def test_dev_script_installs_dev_extras(monkeypatch: MonkeyPatch) -> None:
 
 @pytest.mark.os_agnostic
 def test_install_script_installs_package(monkeypatch: MonkeyPatch) -> None:
+    """Verify install script runs pip install -e."""
     recorded: list[RecordedRun] = []
     synced: list[ProjectMetadata] = []
     monkeypatch.setattr(install, "run", _remember_runs(recorded))
@@ -210,6 +212,7 @@ def test_install_script_installs_package(monkeypatch: MonkeyPatch) -> None:
 
 @pytest.mark.os_agnostic
 def test_run_cli_imports_dynamic_package(monkeypatch: MonkeyPatch) -> None:
+    """Verify run_cli dynamically imports the package CLI module."""
     seen: list[str] = []
     synced: list[ProjectMetadata] = []
 
@@ -237,6 +240,7 @@ def test_run_cli_imports_dynamic_package(monkeypatch: MonkeyPatch) -> None:
 
 @pytest.mark.os_agnostic
 def test_test_script_uses_pyproject_configuration(monkeypatch: MonkeyPatch) -> None:
+    """Verify test script runs pytest with coverage from pyproject config."""
     recorded: list[RecordedRun] = []
 
     def _noop() -> None:

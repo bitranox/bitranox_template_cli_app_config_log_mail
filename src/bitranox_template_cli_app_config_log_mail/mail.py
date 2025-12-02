@@ -1,22 +1,18 @@
 """Email sending adapter using btx_lib_mail.
 
-Purpose
--------
 Provides a clean wrapper around btx_lib_mail that integrates with the
 application's configuration system and logging infrastructure. Isolates
 email functionality behind a domain-appropriate interface.
 
-Contents
---------
-* :class:`EmailConfig` – Configuration container for email settings
-* :func:`send_email` – Primary email sending interface
-* :func:`send_notification` – Convenience wrapper for simple notifications
+Contents:
+    * :class:`EmailConfig` – Configuration container for email settings
+    * :func:`send_email` – Primary email sending interface
+    * :func:`send_notification` – Convenience wrapper for simple notifications
 
-System Role
------------
-Acts as the email adapter layer, bridging btx_lib_mail with the application's
-configuration and logging systems while keeping domain logic decoupled from
-email mechanics.
+System Role:
+    Acts as the email adapter layer, bridging btx_lib_mail with the application's
+    configuration and logging systems while keeping domain logic decoupled from
+    email mechanics.
 """
 
 from __future__ import annotations
@@ -41,39 +37,28 @@ def _default_smtp_hosts() -> list[str]:
 class EmailConfig:
     """Email configuration container.
 
-    Why
-        Provides a domain-appropriate configuration object that maps cleanly
-        to lib_layered_config while remaining independent of btx_lib_mail's
-        internal structure.
+    Provides a domain-appropriate configuration object that maps cleanly
+    to lib_layered_config while remaining independent of btx_lib_mail's
+    internal structure.
 
-    Fields
-    ------
-    smtp_hosts:
-        List of SMTP servers in 'host[:port]' format. Tried in order until
-        one succeeds.
-    from_address:
-        Default sender address for outgoing emails.
-    smtp_username:
-        Optional SMTP authentication username.
-    smtp_password:
-        Optional SMTP authentication password.
-    use_starttls:
-        Enable STARTTLS negotiation.
-    timeout:
-        Socket timeout in seconds for SMTP operations.
-    raise_on_missing_attachments:
-        When True, missing attachment files raise FileNotFoundError.
-    raise_on_invalid_recipient:
-        When True, invalid email addresses raise ValueError.
+    Attributes:
+        smtp_hosts: List of SMTP servers in 'host[:port]' format. Tried in order until
+            one succeeds.
+        from_address: Default sender address for outgoing emails.
+        smtp_username: Optional SMTP authentication username.
+        smtp_password: Optional SMTP authentication password.
+        use_starttls: Enable STARTTLS negotiation.
+        timeout: Socket timeout in seconds for SMTP operations.
+        raise_on_missing_attachments: When True, missing attachment files raise FileNotFoundError.
+        raise_on_invalid_recipient: When True, invalid email addresses raise ValueError.
 
-    Examples
-    --------
-    >>> config = EmailConfig(
-    ...     smtp_hosts=["smtp.example.com:587"],
-    ...     from_address="noreply@example.com"
-    ... )
-    >>> config.smtp_hosts
-    ['smtp.example.com:587']
+    Example:
+        >>> config = EmailConfig(
+        ...     smtp_hosts=["smtp.example.com:587"],
+        ...     from_address="noreply@example.com"
+        ... )
+        >>> config.smtp_hosts
+        ['smtp.example.com:587']
     """
 
     smtp_hosts: list[str] = field(default_factory=_default_smtp_hosts)
@@ -88,24 +73,22 @@ class EmailConfig:
     def __post_init__(self) -> None:
         """Validate configuration values.
 
-        Why
-            Catch common configuration mistakes early with clear error messages
-            rather than allowing invalid values to cause obscure failures later.
+        Catch common configuration mistakes early with clear error messages
+        rather than allowing invalid values to cause obscure failures later.
 
-        Raises
+        Raises:
             ValueError: When configuration values are invalid.
 
-        Examples
-        --------
-        >>> EmailConfig(timeout=-5.0)  # doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ...
-        ValueError: timeout must be positive, got -5.0
+        Example:
+            >>> EmailConfig(timeout=-5.0)  # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+            ...
+            ValueError: timeout must be positive, got -5.0
 
-        >>> EmailConfig(from_address="not-an-email")  # doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ...
-        ValueError: from_address must contain @, got 'not-an-email'
+            >>> EmailConfig(from_address="not-an-email")  # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+            ...
+            ValueError: from_address must contain @, got 'not-an-email'
         """
         # Validate timeout is positive
         if self.timeout <= 0:
@@ -133,19 +116,17 @@ class EmailConfig:
     def to_conf_mail(self) -> ConfMail:
         """Convert to btx_lib_mail ConfMail object.
 
-        Why
-            Isolates the adapter dependency on btx_lib_mail types from the
-            rest of the application.
+        Isolates the adapter dependency on btx_lib_mail types from the
+        rest of the application.
 
-        Returns
+        Returns:
             ConfMail instance configured with current settings.
 
-        Examples
-        --------
-        >>> config = EmailConfig(smtp_hosts=["smtp.example.com"])
-        >>> conf = config.to_conf_mail()
-        >>> conf.smtphosts
-        ['smtp.example.com']
+        Example:
+            >>> config = EmailConfig(smtp_hosts=["smtp.example.com"])
+            >>> conf = config.to_conf_mail()
+            >>> conf.smtphosts
+            ['smtp.example.com']
         """
         # Pydantic model type inference limitation in strict mode
         return ConfMail(
@@ -178,62 +159,46 @@ def send_email(
 ) -> bool:
     """Send an email using configured SMTP settings.
 
-    Why
-        Provides the primary email-sending interface that integrates with
-        application configuration while exposing a clean, typed API.
+    Provides the primary email-sending interface that integrates with
+    application configuration while exposing a clean, typed API.
 
-    Parameters
-    ----------
-    config:
-        Email configuration containing SMTP settings and defaults.
-    recipients:
-        Single recipient address or sequence of addresses.
-    subject:
-        Email subject line (UTF-8 supported).
-    body:
-        Plain-text email body.
-    body_html:
-        HTML email body (optional, sent as multipart with plain text).
-    from_address:
-        Override sender address. Uses config.from_address when None.
-    attachments:
-        Optional sequence of file paths to attach.
+    Args:
+        config: Email configuration containing SMTP settings and defaults.
+        recipients: Single recipient address or sequence of addresses.
+        subject: Email subject line (UTF-8 supported).
+        body: Plain-text email body.
+        body_html: HTML email body (optional, sent as multipart with plain text).
+        from_address: Override sender address. Uses config.from_address when None.
+        attachments: Optional sequence of file paths to attach.
 
-    Returns
-    -------
-    bool:
+    Returns:
         Always True when delivery succeeds. Failures raise exceptions.
 
-    Raises
-    ------
-    ValueError:
-        No valid recipients remain after validation.
-    FileNotFoundError:
-        Required attachment missing and config.raise_on_missing_attachments
-        is True.
-    RuntimeError:
-        All SMTP hosts failed for a recipient.
+    Raises:
+        ValueError: No valid recipients remain after validation.
+        FileNotFoundError: Required attachment missing and config.raise_on_missing_attachments
+            is True.
+        RuntimeError: All SMTP hosts failed for a recipient.
 
-    Side Effects
+    Side Effects:
         Sends email via SMTP. Logs send attempts at INFO level and failures
         at ERROR level.
 
-    Examples
-    --------
-    >>> from unittest.mock import patch, MagicMock
-    >>> config = EmailConfig(
-    ...     smtp_hosts=["smtp.example.com"],
-    ...     from_address="sender@example.com"
-    ... )
-    >>> with patch("smtplib.SMTP") as mock_smtp:
-    ...     result = send_email(
-    ...         config=config,
-    ...         recipients="recipient@example.com",
-    ...         subject="Test",
-    ...         body="Hello"
-    ...     )
-    >>> result
-    True
+    Example:
+        >>> from unittest.mock import patch, MagicMock
+        >>> config = EmailConfig(
+        ...     smtp_hosts=["smtp.example.com"],
+        ...     from_address="sender@example.com"
+        ... )
+        >>> with patch("smtplib.SMTP") as mock_smtp:
+        ...     result = send_email(
+        ...         config=config,
+        ...         recipients="recipient@example.com",
+        ...         subject="Test",
+        ...         body="Hello"
+        ...     )
+        >>> result
+        True
     """
     sender = from_address if from_address is not None else config.from_address
 
@@ -296,52 +261,40 @@ def send_notification(
 ) -> bool:
     """Send a simple plain-text notification email.
 
-    Why
-        Convenience wrapper for the common case of sending simple notifications
-        without HTML or attachments.
+    Convenience wrapper for the common case of sending simple notifications
+    without HTML or attachments.
 
-    Parameters
-    ----------
-    config:
-        Email configuration containing SMTP settings.
-    recipients:
-        Single recipient address or sequence of addresses.
-    subject:
-        Email subject line.
-    message:
-        Plain-text notification message.
+    Args:
+        config: Email configuration containing SMTP settings.
+        recipients: Single recipient address or sequence of addresses.
+        subject: Email subject line.
+        message: Plain-text notification message.
 
-    Returns
-    -------
-    bool:
+    Returns:
         Always True when delivery succeeds. Failures raise exceptions.
 
-    Raises
-    ------
-    ValueError:
-        No valid recipients remain after validation.
-    RuntimeError:
-        All SMTP hosts failed for a recipient.
+    Raises:
+        ValueError: No valid recipients remain after validation.
+        RuntimeError: All SMTP hosts failed for a recipient.
 
-    Side Effects
+    Side Effects:
         Sends email via SMTP. Logs send attempts.
 
-    Examples
-    --------
-    >>> from unittest.mock import patch
-    >>> config = EmailConfig(
-    ...     smtp_hosts=["smtp.example.com"],
-    ...     from_address="alerts@example.com"
-    ... )
-    >>> with patch("smtplib.SMTP"):
-    ...     result = send_notification(
-    ...         config=config,
-    ...         recipients="admin@example.com",
-    ...         subject="System Alert",
-    ...         message="Deployment completed successfully"
-    ...     )
-    >>> result
-    True
+    Example:
+        >>> from unittest.mock import patch
+        >>> config = EmailConfig(
+        ...     smtp_hosts=["smtp.example.com"],
+        ...     from_address="alerts@example.com"
+        ... )
+        >>> with patch("smtplib.SMTP"):
+        ...     result = send_notification(
+        ...         config=config,
+        ...         recipients="admin@example.com",
+        ...         subject="System Alert",
+        ...         message="Deployment completed successfully"
+        ...     )
+        >>> result
+        True
     """
     return send_email(
         config=config,
@@ -354,34 +307,28 @@ def send_notification(
 def load_email_config_from_dict(config_dict: Mapping[str, Any]) -> EmailConfig:
     """Load EmailConfig from a configuration dictionary.
 
-    Why
-        Bridges lib_layered_config's dictionary output with the typed
-        EmailConfig dataclass, handling optional values and type conversions.
+    Bridges lib_layered_config's dictionary output with the typed
+    EmailConfig dataclass, handling optional values and type conversions.
 
-    Parameters
-    ----------
-    config_dict:
-        Configuration dictionary typically from lib_layered_config.
-        Expected to have an 'email' section with email settings.
+    Args:
+        config_dict: Configuration dictionary typically from lib_layered_config.
+            Expected to have an 'email' section with email settings.
 
-    Returns
-    -------
-    EmailConfig:
+    Returns:
         Configured email settings with defaults for missing values.
 
-    Examples
-    --------
-    >>> config_dict = {
-    ...     "email": {
-    ...         "smtp_hosts": ["smtp.example.com:587"],
-    ...         "from_address": "test@example.com"
-    ...     }
-    ... }
-    >>> email_config = load_email_config_from_dict(config_dict)
-    >>> email_config.from_address
-    'test@example.com'
-    >>> email_config.use_starttls
-    True
+    Example:
+        >>> config_dict = {
+        ...     "email": {
+        ...         "smtp_hosts": ["smtp.example.com:587"],
+        ...         "from_address": "test@example.com"
+        ...     }
+        ... }
+        >>> email_config = load_email_config_from_dict(config_dict)
+        >>> email_config.from_address
+        'test@example.com'
+        >>> email_config.use_starttls
+        True
     """
     email_section_raw = config_dict.get("email", {})
     email_section: Mapping[str, Any] = cast(Mapping[str, Any], email_section_raw if isinstance(email_section_raw, dict) else {})

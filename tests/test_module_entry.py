@@ -19,14 +19,10 @@ from bitranox_template_cli_app_config_log_mail import __init__conf__, cli as cli
 class PrintedTraceback:
     """Capture of a traceback rendering invoked by ``lib_cli_exit_tools``.
 
-    Attributes
-    ----------
-    trace_back:
-        ``True`` when verbose tracebacks were printed.
-    length_limit:
-        Character budget applied to the output.
-    stream_present:
-        ``True`` when a stream object was provided to the printer.
+    Attributes:
+        trace_back: ``True`` when verbose tracebacks were printed.
+        length_limit: Character budget applied to the output.
+        stream_present: ``True`` when a stream object was provided to the printer.
     """
 
     trace_back: bool
@@ -37,18 +33,15 @@ class PrintedTraceback:
 def _record_print_message(target: list[PrintedTraceback]) -> Callable[..., None]:
     """Return an exception printer that records each invocation.
 
-    Why
-        Module-entry tests assert that ``lib_cli_exit_tools`` prints the correct
-        style of traceback; capturing the parameters lets the test assert intent
-        without examining stderr.
+    Module-entry tests assert that lib_cli_exit_tools prints the correct
+    style of traceback; capturing the parameters lets the test assert intent
+    without examining stderr.
 
-    Inputs
-        target:
-            Mutable list collecting :class:`PrintedTraceback` entries.
+    Args:
+        target: Mutable list collecting PrintedTraceback entries.
 
-    Outputs
-        Callable[..., None]:
-            Replacement printer used during the test.
+    Returns:
+        Replacement printer used during the test.
     """
 
     def _printer(
@@ -70,6 +63,7 @@ def _record_print_message(target: list[PrintedTraceback]) -> Callable[..., None]
 
 @pytest.mark.os_agnostic
 def test_when_module_entry_returns_zero_the_story_matches_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify python -m invocation delegates to CLI with correct args."""
     ledger: dict[str, object] = {}
 
     monkeypatch.setattr(sys, "argv", ["bitranox_template_cli_app_config_log_mail"], raising=False)
@@ -99,6 +93,7 @@ def test_when_module_entry_returns_zero_the_story_matches_cli(monkeypatch: pytes
 
 @pytest.mark.os_agnostic
 def test_when_module_entry_raises_the_exit_helpers_format_the_song(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify exceptions are formatted by lib_cli_exit_tools helpers."""
     printed: list[PrintedTraceback] = []
     codes: list[str] = []
     monkeypatch.setattr(sys, "argv", ["bitranox_template_cli_app_config_log_mail"], raising=False)
@@ -142,6 +137,7 @@ def test_when_traceback_flag_is_used_via_module_entry_the_full_poem_is_printed(
     capsys: pytest.CaptureFixture[str],
     strip_ansi: Callable[[str], str],
 ) -> None:
+    """Verify --traceback via module entry prints full traceback on error."""
     monkeypatch.setattr(sys, "argv", ["check_zpool_status", "--traceback", "fail"])
     monkeypatch.setattr(lib_cli_exit_tools.config, "traceback", False, raising=False)
     monkeypatch.setattr(lib_cli_exit_tools.config, "traceback_force_color", False, raising=False)
@@ -161,4 +157,5 @@ def test_when_traceback_flag_is_used_via_module_entry_the_full_poem_is_printed(
 
 @pytest.mark.os_agnostic
 def test_when_module_entry_imports_cli_the_alias_stays_intact() -> None:
+    """Verify CLI command name remains consistent after import."""
     assert cli_mod.cli.name == cli_mod.cli.name
