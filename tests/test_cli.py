@@ -600,6 +600,88 @@ def test_when_config_deploy_is_invoked_with_profile_it_passes_profile(
 
 
 @pytest.mark.os_agnostic
+def test_when_config_is_invoked_with_profile_it_passes_profile_to_get_config(
+    cli_runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    mock_config_factory: Any,
+    clear_config_cache: None,
+) -> None:
+    """Verify config command passes --profile to get_config."""
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+    from bitranox_template_cli_app_config_log_mail import config_show
+
+    captured_profiles: list[str | None] = []
+    test_data = {"test_section": {"key": "value"}}
+    mock_config = mock_config_factory(test_data)
+
+    def get_mock(*, profile: str | None = None, **_kwargs: Any) -> Any:
+        captured_profiles.append(profile)
+        return mock_config
+
+    monkeypatch.setattr(config_mod, "get_config", get_mock)
+    monkeypatch.setattr(config_show, "get_config", get_mock)
+
+    result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--profile", "staging"])
+
+    assert result.exit_code == 0
+    assert "staging" in captured_profiles
+
+
+@pytest.mark.os_agnostic
+def test_when_config_is_invoked_without_profile_it_passes_none(
+    cli_runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+    mock_config_factory: Any,
+    clear_config_cache: None,
+) -> None:
+    """Verify config command passes None when no --profile specified."""
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+    from bitranox_template_cli_app_config_log_mail import config_show
+
+    captured_profiles: list[str | None] = []
+    test_data = {"test_section": {"key": "value"}}
+    mock_config = mock_config_factory(test_data)
+
+    def get_mock(*, profile: str | None = None, **_kwargs: Any) -> Any:
+        captured_profiles.append(profile)
+        return mock_config
+
+    monkeypatch.setattr(config_mod, "get_config", get_mock)
+    monkeypatch.setattr(config_show, "get_config", get_mock)
+
+    result: Result = cli_runner.invoke(cli_mod.cli, ["config"])
+
+    assert result.exit_code == 0
+    assert None in captured_profiles
+
+
+@pytest.mark.os_agnostic
+def test_when_config_deploy_is_invoked_without_profile_it_passes_none(
+    cli_runner: CliRunner,
+    tmp_path: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify config-deploy passes None when no --profile specified."""
+    from pathlib import Path
+
+    deployed_path = tmp_path / "config.toml"
+    deployed_path.touch()
+    captured_profiles: list[str | None] = []
+
+    def mock_deploy(*, targets: Any, force: bool = False, profile: str | None = None) -> list[Path]:
+        captured_profiles.append(profile)
+        return [deployed_path]
+
+    monkeypatch.setattr(cli_mod, "deploy_configuration", mock_deploy)
+
+    result: Result = cli_runner.invoke(cli_mod.cli, ["config-deploy", "--target", "user"])
+
+    assert result.exit_code == 0
+    assert captured_profiles == [None]
+    assert "(profile:" not in result.output
+
+
+@pytest.mark.os_agnostic
 def test_when_an_unknown_command_is_used_a_helpful_error_appears(cli_runner: CliRunner) -> None:
     """Verify unknown command shows No such command error."""
     result: Result = cli_runner.invoke(cli_mod.cli, ["does-not-exist"])

@@ -68,11 +68,12 @@ bitranox-template-cli-app-config-log fail
 bitranox-template-cli-app-config-log --traceback fail
 
 # Configuration management
-bitranox-template-cli-app-config-log config                    # Show current configuration
-bitranox-template-cli-app-config-log config --format json      # Show as JSON
-bitranox-template-cli-app-config-log config --section lib_log_rich  # Show specific section
-bitranox-template-cli-app-config-log config-deploy --target user    # Deploy config to user directory
-bitranox-template-cli-app-config-log config-deploy --target user --target host  # Deploy to multiple locations
+bitranox-template-cli-app-config-log-mail config                    # Show current configuration
+bitranox-template-cli-app-config-log-mail config --format json      # Show as JSON
+bitranox-template-cli-app-config-log-mail config --section lib_log_rich  # Show specific section
+bitranox-template-cli-app-config-log-mail config --profile production   # Show configuration for production profile
+bitranox-template-cli-app-config-log-mail config-deploy --target user    # Deploy config to user directory
+bitranox-template-cli-app-config-log-mail config-deploy --target user --profile production  # Deploy to production profile
 
 # All commands work with any entry point
 python -m bitranox_template_cli_app_config_log_mail info
@@ -247,39 +248,60 @@ The application uses [lib_layered_config](https://github.com/bitranox/lib_layere
 #### Configuration Locations
 
 Platform-specific paths:
-- **Linux (user)**: `~/.config/bitranox-template-cli-app-config-log/config.toml`
-- **Linux (app)**: `/etc/xdg/bitranox-template-cli-app-config-log/config.toml`
-- **Linux (host)**: `/etc/bitranox-template-cli-app-config-log/hosts/{hostname}.toml`
-- **macOS (user)**: `~/Library/Application Support/bitranox/Bitranox Template CLI App Config Log/config.toml`
-- **Windows (user)**: `%APPDATA%\bitranox\Bitranox Template CLI App Config Log\config.toml`
+- **Linux (user)**: `~/.config/bitranox-template-cli-app-config-log-mail/config.toml`
+- **Linux (app)**: `/etc/xdg/bitranox-template-cli-app-config-log-mail/config.toml`
+- **Linux (host)**: `/etc/bitranox-template-cli-app-config-log-mail/hosts/{hostname}.toml`
+- **macOS (user)**: `~/Library/Application Support/bitranox/Bitranox Template CLI App Config Log Mail/config.toml`
+- **Windows (user)**: `%APPDATA%\bitranox\Bitranox Template CLI App Config Log Mail\config.toml`
+
+#### Profile-Specific Configuration
+
+Profiles allow environment-specific configuration (e.g., production, staging, test). When a profile is specified, configuration is loaded from profile-specific subdirectories:
+
+- **Linux (user, profile=production)**: `~/.config/bitranox-template-cli-app-config-log-mail/profile/production/config.toml`
+- **Linux (app, profile=staging)**: `/etc/xdg/bitranox-template-cli-app-config-log-mail/profile/staging/config.toml`
+
+Use profiles to maintain separate configurations for different environments while keeping a common base configuration.
 
 #### View Configuration
 
 ```bash
 # Show merged configuration from all sources
-bitranox-template-cli-app-config-log config
+bitranox-template-cli-app-config-log-mail config
 
 # Show as JSON for scripting
-bitranox-template-cli-app-config-log config --format json
+bitranox-template-cli-app-config-log-mail config --format json
 
 # Show specific section only
-bitranox-template-cli-app-config-log config --section lib_log_rich
+bitranox-template-cli-app-config-log-mail config --section lib_log_rich
+
+# Show configuration for a specific profile
+bitranox-template-cli-app-config-log-mail config --profile production
+
+# Combine options
+bitranox-template-cli-app-config-log-mail config --profile staging --format json --section email
 ```
 
 #### Deploy Configuration Files
 
 ```bash
 # Create user configuration file
-bitranox-template-cli-app-config-log config-deploy --target user
+bitranox-template-cli-app-config-log-mail config-deploy --target user
 
 # Deploy to system-wide location (requires privileges)
-sudo bitranox-template-cli-app-config-log config-deploy --target app
+sudo bitranox-template-cli-app-config-log-mail config-deploy --target app
 
 # Deploy to multiple locations at once
-bitranox-template-cli-app-config-log config-deploy --target user --target host
+bitranox-template-cli-app-config-log-mail config-deploy --target user --target host
 
 # Overwrite existing configuration
-bitranox-template-cli-app-config-log config-deploy --target user --force
+bitranox-template-cli-app-config-log-mail config-deploy --target user --force
+
+# Deploy to a specific profile directory
+bitranox-template-cli-app-config-log-mail config-deploy --target user --profile production
+
+# Deploy production profile and overwrite if exists
+bitranox-template-cli-app-config-log-mail config-deploy --target user --profile production --force
 ```
 
 #### Environment Variable Overrides
