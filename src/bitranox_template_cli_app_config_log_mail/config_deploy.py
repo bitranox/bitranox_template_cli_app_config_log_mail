@@ -22,12 +22,14 @@ from lib_layered_config import deploy_config
 
 from . import __init__conf__
 from .config import get_default_config_path
+from .enums import DeployTarget
 
 
 def deploy_configuration(
     *,
-    targets: Sequence[str],
+    targets: Sequence[DeployTarget],
     force: bool = False,
+    profile: str | None = None,
 ) -> list[Path]:
     r"""Deploy default configuration to specified target layers.
 
@@ -38,10 +40,14 @@ def deploy_configuration(
     to requested target layers (app, host, user).
 
     Args:
-        targets: Sequence of target layers to deploy to. Valid values: "app", "host", "user".
+        targets: Sequence of DeployTarget enum values specifying target layers.
+            Valid values: DeployTarget.APP, DeployTarget.HOST, DeployTarget.USER.
             Multiple targets can be specified to deploy to several locations at once.
         force: If True, overwrite existing configuration files. If False (default),
             skip files that already exist.
+        profile: Optional profile name for environment isolation. When specified,
+            configuration is deployed to profile-specific subdirectories
+            (e.g., ~/.config/slug/profile/<name>/config.toml).
 
     Returns:
         List of paths where configuration files were created or would be created.
@@ -58,7 +64,7 @@ def deploy_configuration(
         - user: User-specific config (current user's home directory)
 
     Note:
-        Platform-specific paths:
+        Platform-specific paths (without profile):
         - Linux (app): /etc/xdg/{slug}/config.toml
         - Linux (host): /etc/xdg/{slug}/config.toml
         - Linux (user): ~/.config/{slug}/config.toml
@@ -67,22 +73,35 @@ def deploy_configuration(
         - Windows (app): C:\ProgramData\{vendor}\{app}\config.toml
         - Windows (user): %APPDATA%\{vendor}\{app}\config.toml
 
+        Platform-specific paths (with profile='production'):
+        - Linux (user): ~/.config/{slug}/profile/production/config.toml
+        - etc.
+
     Example:
-        >>> paths = deploy_configuration(targets=["user"])  # doctest: +SKIP
+        >>> paths = deploy_configuration(targets=[DeployTarget.USER])  # doctest: +SKIP
         >>> len(paths) > 0  # doctest: +SKIP
         True
         >>> paths[0].exists()  # doctest: +SKIP
         True
-    """
 
+        >>> # Deploy to production profile
+        >>> paths = deploy_configuration(  # doctest: +SKIP
+        ...     targets=[DeployTarget.USER],
+        ...     profile="production"
+        ... )
+    """
     source = get_default_config_path()
+
+    # Convert enum values to strings for lib_layered_config
+    target_strings = [t.value for t in targets]
 
     deployed_paths = deploy_config(
         source=source,
         vendor=__init__conf__.LAYEREDCONF_VENDOR,
         app=__init__conf__.LAYEREDCONF_APP,
         slug=__init__conf__.LAYEREDCONF_SLUG,
-        targets=targets,
+        profile=profile,
+        targets=target_strings,
         force=force,
     )
 

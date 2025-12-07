@@ -434,23 +434,32 @@ def cli_fail() -> None:
     default=None,
     help="Show only a specific configuration section (e.g., 'lib_log_rich')",
 )
-def cli_config(format: str, section: Optional[str]) -> None:
+@click.option(
+    "--profile",
+    type=str,
+    default=None,
+    help="Load configuration from a named profile (e.g., 'production', 'test')",
+)
+def cli_config(format: str, section: Optional[str], profile: Optional[str]) -> None:
     """Display the current merged configuration from all sources.
 
     Shows configuration loaded from:
     - Default config (built-in)
-    - Application config (/etc/xdg/bitranox-template-cli-app-config-log/config.toml)
-    - User config (~/.config/bitranox-template-cli-app-config-log/config.toml)
+    - Application config (/etc/xdg/bitranox-template-cli-app-config-log-mail/config.toml)
+    - User config (~/.config/bitranox-template-cli-app-config-log-mail/config.toml)
     - .env files
-    - Environment variables (BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_*)
+    - Environment variables (BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_*)
 
     Precedence: defaults → app → host → user → dotenv → env
-    """
 
-    with lib_log_rich.runtime.bind(job_id="cli-config", extra={"command": "config", "format": format}):
-        logger.info("Displaying configuration", extra={"format": format, "section": section})
-        output_format = OutputFormat(format.lower())
-        display_config(format=output_format, section=section)
+    When --profile is specified, configuration is loaded from profile-specific
+    subdirectories (e.g., ~/.config/slug/profile/<name>/config.toml).
+    """
+    output_format = OutputFormat(format.lower())
+    extra = {"command": "config", "format": output_format.value, "profile": profile}
+    with lib_log_rich.runtime.bind(job_id="cli-config", extra=extra):
+        logger.info("Displaying configuration", extra={"format": output_format.value, "section": section, "profile": profile})
+        display_config(format=output_format, section=section, profile=profile)
 
 
 @cli.command("config-deploy", context_settings=CLICK_CONTEXT_SETTINGS)
@@ -468,7 +477,13 @@ def cli_config(format: str, section: Optional[str]) -> None:
     default=False,
     help="Overwrite existing configuration files",
 )
-def cli_config_deploy(targets: tuple[str, ...], force: bool) -> None:
+@click.option(
+    "--profile",
+    type=str,
+    default=None,
+    help="Deploy to a named profile directory (e.g., 'production', 'test')",
+)
+def cli_config_deploy(targets: tuple[str, ...], force: bool, profile: Optional[str]) -> None:
     r"""Deploy default configuration to system or user directories.
 
     Creates configuration files in platform-specific locations:
@@ -480,28 +495,38 @@ def cli_config_deploy(targets: tuple[str, ...], force: bool) -> None:
 
     By default, existing files are not overwritten. Use --force to overwrite.
 
+    When --profile is specified, configuration is deployed to profile-specific
+    subdirectories (e.g., ~/.config/slug/profile/<name>/config.toml).
+
     Examples:
         \b
         # Deploy to user config directory
-        $ bitranox-template-cli-app-config-log config-deploy --target user
+        $ bitranox-template-cli-app-config-log-mail config-deploy --target user
 
         \b
         # Deploy to both app and user directories
-        $ bitranox-template-cli-app-config-log config-deploy --target app --target user
+        $ bitranox-template-cli-app-config-log-mail config-deploy --target app --target user
 
         \b
         # Force overwrite existing config
-        $ bitranox-template-cli-app-config-log config-deploy --target user --force
-    """
+        $ bitranox-template-cli-app-config-log-mail config-deploy --target user --force
 
-    with lib_log_rich.runtime.bind(job_id="cli-config-deploy", extra={"command": "config-deploy", "targets": targets, "force": force}):
-        logger.info("Deploying configuration", extra={"targets": targets, "force": force})
+        \b
+        # Deploy to production profile
+        $ bitranox-template-cli-app-config-log-mail config-deploy --target user --profile production
+    """
+    deploy_targets = tuple(DeployTarget(t.lower()) for t in targets)
+    target_values = tuple(t.value for t in deploy_targets)
+    extra = {"command": "config-deploy", "targets": target_values, "force": force, "profile": profile}
+    with lib_log_rich.runtime.bind(job_id="cli-config-deploy", extra=extra):
+        logger.info("Deploying configuration", extra={"targets": target_values, "force": force, "profile": profile})
 
         try:
-            deployed_paths = deploy_configuration(targets=list(targets), force=force)
+            deployed_paths = deploy_configuration(targets=deploy_targets, force=force, profile=profile)
 
             if deployed_paths:
-                click.echo("\nConfiguration deployed successfully:")
+                profile_msg = f" (profile: {profile})" if profile else ""
+                click.echo(f"\nConfiguration deployed successfully{profile_msg}:")
                 for path in deployed_paths:
                     click.echo(f"  ✓ {path}")
             else:
@@ -509,12 +534,12 @@ def cli_config_deploy(targets: tuple[str, ...], force: bool) -> None:
                 click.echo("Use --force to overwrite existing configuration files.")
 
         except PermissionError as exc:
-            logger.error("Permission denied when deploying configuration", extra={"error": str(exc)})
+            logger.error("Permission denied when deploying configuration", extra={"error": str(exc), "profile": profile})
             click.echo(f"\nError: Permission denied. {exc}", err=True)
             click.echo("Hint: System-wide deployment (--target app/host) may require sudo.", err=True)
             raise SystemExit(1)
         except Exception as exc:
-            logger.error("Failed to deploy configuration", extra={"error": str(exc), "error_type": type(exc).__name__})
+            logger.error("Failed to deploy configuration", extra={"error": str(exc), "error_type": type(exc).__name__, "profile": profile})
             click.echo(f"\nError: Failed to deploy configuration: {exc}", err=True)
             raise SystemExit(1)
 

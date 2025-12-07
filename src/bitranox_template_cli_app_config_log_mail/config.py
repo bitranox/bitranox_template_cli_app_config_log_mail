@@ -54,9 +54,9 @@ def get_default_config_path() -> Path:
 #   ✅ Future-proof if config is read from multiple places
 #   ✅ Near-zero overhead (single cache entry)
 #   ❌ Prevents dynamic config reloading (if ever needed)
-#   ❌ start_dir parameter variations would bypass cache
-@lru_cache(maxsize=1)
-def get_config(*, start_dir: str | None = None) -> Config:
+#   ❌ start_dir/profile parameter variations would bypass cache
+@lru_cache(maxsize=4)
+def get_config(*, profile: str | None = None, start_dir: str | None = None) -> Config:
     """Load layered configuration with application defaults.
 
     Centralizes configuration loading so all entry points use the same
@@ -72,7 +72,14 @@ def get_config(*, start_dir: str | None = None) -> Config:
     - macOS: Uses Library/Application Support with vendor/app
     - Windows: Uses ProgramData/AppData with vendor/app
 
+    When a profile is specified, configuration is loaded from profile-specific
+    subdirectories (e.g., ~/.config/slug/profile/<name>/config.toml).
+
     Args:
+        profile: Optional profile name for environment isolation. When specified,
+            a ``profile/<name>/`` subdirectory is inserted into all configuration
+            paths. Valid names: alphanumeric, hyphens, underscores. Examples:
+            'test', 'production', 'staging-v2'. Defaults to None (no profile).
         start_dir: Optional directory that seeds .env discovery. Defaults to current
             working directory when None.
 
@@ -80,8 +87,8 @@ def get_config(*, start_dir: str | None = None) -> Config:
         Immutable configuration object with provenance tracking.
 
     Note:
-        This function is cached (maxsize=1). The first call loads and parses all
-        configuration files; subsequent calls with the same start_dir return the
+        This function is cached (maxsize=4). The first call loads and parses all
+        configuration files; subsequent calls with the same parameters return the
         cached Config instance immediately.
 
     Example:
@@ -91,14 +98,17 @@ def get_config(*, start_dir: str | None = None) -> Config:
         >>> config.get("nonexistent", default="fallback")
         'fallback'
 
+        >>> # Load production profile
+        >>> prod_config = get_config(profile="production")  # doctest: +SKIP
+
     See Also:
         lib_layered_config.read_config: Underlying configuration loader.
     """
-
     return read_config(
         vendor=__init__conf__.LAYEREDCONF_VENDOR,
         app=__init__conf__.LAYEREDCONF_APP,
         slug=__init__conf__.LAYEREDCONF_SLUG,
+        profile=profile,
         default_file=get_default_config_path(),
         start_dir=start_dir,
     )

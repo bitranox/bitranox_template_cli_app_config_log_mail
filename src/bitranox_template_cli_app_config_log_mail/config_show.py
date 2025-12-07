@@ -24,7 +24,12 @@ from .config import get_config
 from .enums import OutputFormat
 
 
-def display_config(*, format: OutputFormat = OutputFormat.HUMAN, section: str | None = None) -> None:
+def display_config(
+    *,
+    format: OutputFormat = OutputFormat.HUMAN,
+    section: str | None = None,
+    profile: str | None = None,
+) -> None:
     """Display the current merged configuration from all sources.
 
     Users need visibility into the effective configuration loaded from
@@ -37,6 +42,9 @@ def display_config(*, format: OutputFormat = OutputFormat.HUMAN, section: str | 
             OutputFormat.JSON for JSON. Defaults to OutputFormat.HUMAN.
         section: Optional section name to display only that section. When None,
             displays all configuration.
+        profile: Optional profile name for environment isolation. When specified,
+            loads configuration from profile-specific subdirectories
+            (e.g., ~/.config/slug/profile/<name>/config.toml).
 
     Side Effects:
         Writes formatted configuration to stdout via click.echo().
@@ -53,16 +61,17 @@ def display_config(*, format: OutputFormat = OutputFormat.HUMAN, section: str | 
           service = "bitranox_template_cli_app_config_log_mail"
           environment = "prod"
 
-        >>> display_config(format="json")  # doctest: +SKIP
+        >>> display_config(format=OutputFormat.JSON)  # doctest: +SKIP
         {
           "lib_log_rich": {
             "service": "bitranox_template_cli_app_config_log_mail",
             "environment": "prod"
           }
         }
-    """
 
-    config = get_config()
+        >>> display_config(profile="production")  # doctest: +SKIP
+    """
+    config = get_config(profile=profile)
 
     # Output in requested format
     if format == OutputFormat.JSON:

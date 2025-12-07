@@ -488,14 +488,12 @@ def test_when_config_deploy_is_invoked_it_deploys_configuration(
     """Verify config-deploy creates configuration files."""
     from pathlib import Path
 
-    # Mock deploy_configuration to return a test path without actually deploying
     deployed_path = tmp_path / "config.toml"
     deployed_path.touch()
 
-    def mock_deploy(*, targets: Any, force: bool = False) -> list[Path]:
+    def mock_deploy(*, targets: Any, force: bool = False, profile: str | None = None) -> list[Path]:
         return [deployed_path]
 
-    # Patch in the cli module where the function is used
     monkeypatch.setattr(cli_mod, "deploy_configuration", mock_deploy)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config-deploy", "--target", "user"])
@@ -513,8 +511,8 @@ def test_when_config_deploy_finds_no_files_to_create_it_informs_user(
     """Verify config-deploy reports when no files are created."""
     from pathlib import Path
 
-    def mock_deploy(*, targets: Any, force: bool = False) -> list[Path]:
-        return []  # No files created
+    def mock_deploy(*, targets: Any, force: bool = False, profile: str | None = None) -> list[Path]:
+        return []
 
     monkeypatch.setattr(cli_mod, "deploy_configuration", mock_deploy)
 
@@ -532,7 +530,7 @@ def test_when_config_deploy_encounters_permission_error_it_handles_gracefully(
 ) -> None:
     """Verify config-deploy handles PermissionError gracefully."""
 
-    def mock_deploy(*, targets: Any, force: bool = False) -> list[Any]:
+    def mock_deploy(*, targets: Any, force: bool = False, profile: str | None = None) -> list[Any]:
         raise PermissionError("Permission denied")
 
     monkeypatch.setattr(cli_mod, "deploy_configuration", mock_deploy)
@@ -552,16 +550,18 @@ def test_when_config_deploy_supports_multiple_targets(
 ) -> None:
     """Verify config-deploy accepts multiple --target options."""
     from pathlib import Path
+    from bitranox_template_cli_app_config_log_mail.enums import DeployTarget
 
     path1 = tmp_path / "config1.toml"
     path2 = tmp_path / "config2.toml"
     path1.touch()
     path2.touch()
 
-    def mock_deploy(*, targets: Any, force: bool = False) -> list[Path]:
-        assert len(targets) == 2
-        assert "user" in targets
-        assert "host" in targets
+    def mock_deploy(*, targets: Any, force: bool = False, profile: str | None = None) -> list[Path]:
+        target_values = [t.value if isinstance(t, DeployTarget) else t for t in targets]
+        assert len(target_values) == 2
+        assert "user" in target_values
+        assert "host" in target_values
         return [path1, path2]
 
     monkeypatch.setattr(cli_mod, "deploy_configuration", mock_deploy)
@@ -571,6 +571,32 @@ def test_when_config_deploy_supports_multiple_targets(
     assert result.exit_code == 0
     assert str(path1) in result.output
     assert str(path2) in result.output
+
+
+@pytest.mark.os_agnostic
+def test_when_config_deploy_is_invoked_with_profile_it_passes_profile(
+    cli_runner: CliRunner,
+    tmp_path: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify config-deploy passes profile to deploy_configuration."""
+    from pathlib import Path
+
+    deployed_path = tmp_path / "config.toml"
+    deployed_path.touch()
+    captured_profile: list[str | None] = []
+
+    def mock_deploy(*, targets: Any, force: bool = False, profile: str | None = None) -> list[Path]:
+        captured_profile.append(profile)
+        return [deployed_path]
+
+    monkeypatch.setattr(cli_mod, "deploy_configuration", mock_deploy)
+
+    result: Result = cli_runner.invoke(cli_mod.cli, ["config-deploy", "--target", "user", "--profile", "production"])
+
+    assert result.exit_code == 0
+    assert captured_profile == ["production"]
+    assert "(profile: production)" in result.output
 
 
 @pytest.mark.os_agnostic
