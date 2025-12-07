@@ -22,6 +22,7 @@ the [Keep a Changelog](https://keepachangelog.com/) format.
 - Flattened `test_mail.py` from class-based to function-based tests
 - Added `@pytest.mark.os_agnostic` markers to all mail tests
 - Increased lru_cache maxsize from 1 to 4 in `get_config()` for profile variations
+- Added lru_cache to `get_default_config_path()` since the path never changes at runtime
 - Updated `config_deploy.py` to use `DeployTarget` enum instead of strings
 - Updated README with profile configuration documentation and examples
 
