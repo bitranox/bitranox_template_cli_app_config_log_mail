@@ -164,11 +164,18 @@ def run(
     if dry_run:
         print(f"[dry-run] {display}")
         return RunResult(0, "", "")
+
+    # Ensure UTF-8 encoding for subprocess I/O
+    run_env: dict[str, str] = dict(os.environ)
+    run_env["PYTHONIOENCODING"] = "utf-8"
+    if env is not None:
+        run_env.update(env)
+
     proc: CompletedProcess[str] = subprocess.run(
         args,
         shell=shell,
         cwd=cwd,
-        env=env,
+        env=run_env,
         text=True,
         capture_output=capture,
     )
@@ -625,9 +632,20 @@ def read_version_from_pyproject(pyproject: Path = Path("pyproject.toml")) -> str
     return match.group(1) if match else ""
 
 
+def _get_utf8_env() -> dict[str, str]:
+    """Return environment dict with PYTHONIOENCODING set to utf-8."""
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    return env
+
+
 def ensure_clean_git_tree() -> None:
     """Ensure the git working tree has no uncommitted changes."""
-    dirty = subprocess.call(["bash", "-lc", "! git diff --quiet || ! git diff --cached --quiet"], stdout=subprocess.DEVNULL)
+    dirty = subprocess.call(
+        ["bash", "-lc", "! git diff --quiet || ! git diff --cached --quiet"],
+        stdout=subprocess.DEVNULL,
+        env=_get_utf8_env(),
+    )
     if dirty == 0:
         print("[release] Working tree not clean. Commit or stash changes first.", file=sys.stderr)
         raise SystemExit(1)
@@ -651,6 +669,7 @@ def git_tag_exists(name: str) -> bool:
         subprocess.call(
             ["bash", "-lc", f"git rev-parse -q --verify {shlex.quote('refs/tags/' + name)} >/dev/null"],
             stdout=subprocess.DEVNULL,
+            env=_get_utf8_env(),
         )
         == 0
     )
@@ -673,7 +692,14 @@ def gh_available() -> bool:
 
 def gh_release_exists(tag: str) -> bool:
     """Check if a GitHub release exists for the given tag."""
-    return subprocess.call(["bash", "-lc", f"gh release view {shlex.quote(tag)} >/dev/null 2>&1"], stdout=subprocess.DEVNULL) == 0
+    return (
+        subprocess.call(
+            ["bash", "-lc", f"gh release view {shlex.quote(tag)} >/dev/null 2>&1"],
+            stdout=subprocess.DEVNULL,
+            env=_get_utf8_env(),
+        )
+        == 0
+    )
 
 
 def gh_release_create(tag: str, title: str, body: str) -> None:
