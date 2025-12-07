@@ -1,6 +1,6 @@
 [project]
 name = "bitranox_template_cli_app_config_log_mail"
-version = "0.0.1"
+version = "0.2.0"
 description = "Template CLI application with configuration management and structured logging"
 readme = "README.md"
 requires-python = ">=3.13"

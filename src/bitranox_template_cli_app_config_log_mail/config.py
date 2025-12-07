@@ -27,6 +27,7 @@ from lib_layered_config import Config, read_config
 from . import __init__conf__
 
 
+@lru_cache(maxsize=1)
 def get_default_config_path() -> Path:
     """Return the path to the bundled default configuration file.
 
@@ -38,6 +39,9 @@ def get_default_config_path() -> Path:
     Returns:
         Absolute path to defaultconfig.toml.
 
+    Note:
+        This function is cached since the path never changes during runtime.
+
     Example:
         >>> path = get_default_config_path()
         >>> path.name
@@ -45,7 +49,6 @@ def get_default_config_path() -> Path:
         >>> path.exists()
         True
     """
-
     return Path(__file__).parent / "defaultconfig.toml"
 
 
