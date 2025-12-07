@@ -3,7 +3,32 @@
 All notable changes to this project will be documented in this file following
 the [Keep a Changelog](https://keepachangelog.com/) format.
 
-## [Unreleased]
+
+
+## [0.2.0] - 2025-12-07
+
+### Added
+- `--profile` option for `config` command to load profile-specific configuration
+- `--profile` option for `config-deploy` command to deploy to profile directories
+- Profile parameter support in `get_config()`, `display_config()`, and `deploy_configuration()`
+- Profile-specific configuration paths (e.g., `~/.config/slug/profile/<name>/config.toml`)
+- `OutputFormat` and `DeployTarget` enums for type-safe CLI options
+- `LoggingConfig` Pydantic model for validated logging configuration
+- 4 new behavioral tests for profile functionality
+- PYTHONIOENCODING=utf-8 for all subprocess calls in scripts
+
+### Changed
+- Centralized test fixtures in `conftest.py` (`MockConfig`, `mock_config_factory`, `clear_config_cache`)
+- Flattened `test_mail.py` from class-based to function-based tests
+- Added `@pytest.mark.os_agnostic` markers to all mail tests
+- Increased lru_cache maxsize from 1 to 4 in `get_config()` for profile variations
+- Updated `config_deploy.py` to use `DeployTarget` enum instead of strings
+- Updated README with profile configuration documentation and examples
+
+### Fixed
+- UTF-8 encoding issues in subprocess calls across different locales
+
+## [0.1.0] - 2025-12-07
 
 ### Added
 - Email sending functionality via `btx-lib-mail>=1.0.1` integration
