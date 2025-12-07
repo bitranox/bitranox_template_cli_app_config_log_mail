@@ -48,6 +48,7 @@ from .behaviors import emit_greeting, noop_main, raise_intentional_failure
 from .config import get_config
 from .config_deploy import deploy_configuration
 from .config_show import display_config
+from .enums import DeployTarget, OutputFormat
 from .logging_setup import init_logging
 from .mail import EmailConfig, load_email_config_from_dict, send_email, send_notification
 
@@ -423,8 +424,8 @@ def cli_fail() -> None:
 @cli.command("config", context_settings=CLICK_CONTEXT_SETTINGS)
 @click.option(
     "--format",
-    type=click.Choice(["human", "json"], case_sensitive=False),
-    default="human",
+    type=click.Choice([f.value for f in OutputFormat], case_sensitive=False),
+    default=OutputFormat.HUMAN.value,
     help="Output format (human-readable or JSON)",
 )
 @click.option(
@@ -448,14 +449,15 @@ def cli_config(format: str, section: Optional[str]) -> None:
 
     with lib_log_rich.runtime.bind(job_id="cli-config", extra={"command": "config", "format": format}):
         logger.info("Displaying configuration", extra={"format": format, "section": section})
-        display_config(format=format, section=section)
+        output_format = OutputFormat(format.lower())
+        display_config(format=output_format, section=section)
 
 
 @cli.command("config-deploy", context_settings=CLICK_CONTEXT_SETTINGS)
 @click.option(
     "--target",
     "targets",
-    type=click.Choice(["app", "host", "user"], case_sensitive=False),
+    type=click.Choice([t.value for t in DeployTarget], case_sensitive=False),
     multiple=True,
     required=True,
     help="Target configuration layer(s) to deploy to (can specify multiple)",

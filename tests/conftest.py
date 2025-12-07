@@ -1,4 +1,10 @@
-"""Shared pytest fixtures for CLI and module-entry tests."""
+"""Shared pytest fixtures for CLI and module-entry tests.
+
+Centralizes test infrastructure following clean architecture principles:
+- All shared fixtures live here
+- Tests import fixtures implicitly via pytest's conftest discovery
+- Fixtures use descriptive names that read as plain English
+"""
 
 from __future__ import annotations
 
@@ -6,16 +12,17 @@ import re
 from collections.abc import Callable, Iterator
 from dataclasses import fields
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from lib_layered_config import Config
 
 import lib_cli_exit_tools
 
 
-# Load .env file for integration tests
 def _load_dotenv() -> None:
-    """Load .env file if it exists for integration test configuration."""
+    """Load .env file when it exists for integration test configuration."""
     try:
         from dotenv import load_dotenv
 
@@ -23,7 +30,6 @@ def _load_dotenv() -> None:
         if env_file.exists():
             load_dotenv(env_file)
     except ImportError:
-        # python-dotenv not installed, skip loading
         pass
 
 
@@ -104,3 +110,59 @@ def isolated_traceback_config(monkeypatch: pytest.MonkeyPatch) -> None:
     lib_cli_exit_tools.reset_config()
     monkeypatch.setattr(lib_cli_exit_tools.config, "traceback", False, raising=False)
     monkeypatch.setattr(lib_cli_exit_tools.config, "traceback_force_color", False, raising=False)
+
+
+class MockConfig(Config):
+    """Reusable mock configuration for testing CLI commands.
+
+    Provides a minimal Config implementation that returns data from a dict
+    without touching the filesystem.
+    """
+
+    def __init__(self, data: dict[str, Any]) -> None:
+        object.__setattr__(self, "_mock_data", data)
+
+    def as_dict(self) -> dict[str, Any]:
+        return dict(object.__getattribute__(self, "_mock_data"))
+
+    def to_json(self, *, indent: int | None = None) -> str:
+        import json
+
+        return json.dumps(object.__getattribute__(self, "_mock_data"), indent=indent)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return object.__getattribute__(self, "_mock_data").get(key, default)
+
+
+@pytest.fixture
+def mock_config_factory() -> Callable[[dict[str, Any]], MockConfig]:
+    """Provide a factory that creates MockConfig instances with given data."""
+
+    def _factory(data: dict[str, Any]) -> MockConfig:
+        return MockConfig(data)
+
+    return _factory
+
+
+@pytest.fixture
+def email_test_config() -> dict[str, Any]:
+    """Provide standard email configuration for tests."""
+    return {
+        "email": {
+            "smtp_hosts": ["smtp.test.com:587"],
+            "from_address": "sender@test.com",
+        }
+    }
+
+
+@pytest.fixture
+def clear_config_cache() -> Iterator[None]:
+    """Clear the get_config lru_cache before each test.
+
+    Note: Only clears before, not after, to avoid errors when the function
+    has been monkeypatched during the test (losing cache_clear method).
+    """
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+
+    config_mod.get_config.cache_clear()
+    yield

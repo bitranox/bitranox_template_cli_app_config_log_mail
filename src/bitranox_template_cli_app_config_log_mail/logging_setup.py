@@ -5,6 +5,7 @@ eliminating duplication between module entry (__main__.py) and console script
 (cli.py) while ensuring initialization happens exactly once.
 
 Contents:
+    * :class:`LoggingConfig` – Pydantic model for logging configuration.
     * :func:`init_logging` – idempotent logging initialization with layered config.
     * :func:`_build_runtime_config` – constructs RuntimeConfig from layered sources.
 
@@ -16,15 +17,64 @@ System Role:
 
 from __future__ import annotations
 
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict
+
 import lib_log_rich.config
 import lib_log_rich.runtime
 
 from . import __init__conf__
 from .config import get_config
 
+
+class LoggingConfig(BaseModel):
+    """Pydantic model for logging configuration with defaults.
+
+    Provides validated logging configuration with sensible defaults for
+    the application. Maps directly to lib_log_rich.runtime.RuntimeConfig
+    parameters.
+
+    Attributes:
+        service: Service name for log identification.
+        environment: Environment label (e.g., "prod", "dev").
+
+    Note:
+        Additional fields from lib_log_rich are passed through via model_extra.
+    """
+
+    model_config = ConfigDict(extra="allow", frozen=True)
+
+    service: str
+    environment: str = "prod"
+
+
 # Module-level storage for the runtime configuration
 # Set during init_logging() for potential future use
 _runtime_config: lib_log_rich.runtime.RuntimeConfig | None = None
+
+
+def _load_logging_config() -> LoggingConfig:
+    """Load and validate logging configuration from layered sources.
+
+    Loads configuration from the [lib_log_rich] section and validates it
+    through the LoggingConfig Pydantic model, providing defaults for
+    required fields.
+
+    Returns:
+        Validated logging configuration with defaults applied.
+    """
+    config = get_config()
+    log_config_raw: Any = config.get("lib_log_rich", default={})
+
+    # Ensure we have a dict-like structure
+    log_config_dict: dict[str, Any] = dict(log_config_raw) if log_config_raw else {}
+
+    # Provide default for required 'service' field if not present
+    if "service" not in log_config_dict:
+        log_config_dict["service"] = __init__conf__.name
+
+    return LoggingConfig.model_validate(log_config_dict)
 
 
 def _build_runtime_config() -> lib_log_rich.runtime.RuntimeConfig:
@@ -33,8 +83,8 @@ def _build_runtime_config() -> lib_log_rich.runtime.RuntimeConfig:
     Centralizes the mapping from lib_layered_config to lib_log_rich
     RuntimeConfig, ensuring all configuration sources (defaults, app,
     host, user, dotenv, env) are respected. Loads configuration via
-    get_config() and extracts the [lib_log_rich] section, providing
-    defaults for required parameters (service, environment).
+    get_config() and extracts the [lib_log_rich] section, validating
+    through LoggingConfig Pydantic model.
 
     Returns:
         Fully configured runtime settings ready for lib_log_rich.init().
@@ -45,20 +95,11 @@ def _build_runtime_config() -> lib_log_rich.runtime.RuntimeConfig:
         use lib_log_rich's built-in defaults. The service and environment
         parameters default to package metadata when not configured.
     """
+    logging_config = _load_logging_config()
 
-    config = get_config()
-    log_config = config.get("lib_log_rich", default={})
-
-    # Convert to dict and provide defaults for required parameters
-    config_dict = dict(log_config)
-
-    # Ensure required parameters have sensible defaults
-    config_dict.setdefault("service", __init__conf__.name)
-    config_dict.setdefault("environment", "prod")
-
-    # Build RuntimeConfig by unpacking the configuration dictionary
-    # Note: TOML arrays are passed as lists; lib_log_rich accepts both lists and tuples
-    return lib_log_rich.runtime.RuntimeConfig(**config_dict)
+    # Build RuntimeConfig using Pydantic's model_dump for conversion
+    # model_dump() exports all fields including extra fields
+    return lib_log_rich.runtime.RuntimeConfig(**logging_config.model_dump())
 
 
 def init_logging() -> None:

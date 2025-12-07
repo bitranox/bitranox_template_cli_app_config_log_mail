@@ -21,9 +21,10 @@ from typing import Any, cast
 import click
 
 from .config import get_config
+from .enums import OutputFormat
 
 
-def display_config(*, format: str = "human", section: str | None = None) -> None:
+def display_config(*, format: OutputFormat = OutputFormat.HUMAN, section: str | None = None) -> None:
     """Display the current merged configuration from all sources.
 
     Users need visibility into the effective configuration loaded from
@@ -32,8 +33,8 @@ def display_config(*, format: str = "human", section: str | None = None) -> None
     it in the requested format.
 
     Args:
-        format: Output format: "human" for TOML-like display or "json" for JSON.
-            Defaults to "human".
+        format: Output format: OutputFormat.HUMAN for TOML-like display or
+            OutputFormat.JSON for JSON. Defaults to OutputFormat.HUMAN.
         section: Optional section name to display only that section. When None,
             displays all configuration.
 
@@ -64,7 +65,7 @@ def display_config(*, format: str = "human", section: str | None = None) -> None
     config = get_config()
 
     # Output in requested format
-    if format.lower() == "json":
+    if format == OutputFormat.JSON:
         if section:
             # Show specific section as JSON
             section_data = config.get(section, default={})

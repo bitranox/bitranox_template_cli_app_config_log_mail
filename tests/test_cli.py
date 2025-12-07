@@ -301,46 +301,26 @@ def test_when_config_is_invoked_with_nonexistent_section_it_fails(cli_runner: Cl
 def test_when_config_is_invoked_with_mocked_data_it_displays_sections(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
+    mock_config_factory: Any,
+    clear_config_cache: None,
 ) -> None:
     """Verify config displays sections from mocked configuration."""
-    from lib_layered_config import Config
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+    from bitranox_template_cli_app_config_log_mail import config_show
 
-    # Create a mock Config with test data
-    test_config_data = {
+    test_data = {
         "test_section": {
             "setting1": "value1",
             "setting2": 42,
         }
     }
+    mock_config = mock_config_factory(test_data)
 
-    class MockConfig(Config):
-        def __init__(self) -> None:
-            pass
+    def get_mock(**_kwargs: Any) -> Any:
+        return mock_config
 
-        def as_dict(self) -> dict[str, Any]:
-            return test_config_data
-
-        def to_json(self, *, indent: int | None = None) -> str:
-            import json
-
-            return json.dumps(test_config_data, indent=indent)
-
-        def get(self, key: str, default: Any = None) -> Any:
-            return test_config_data.get(key, default)
-
-    # Clear the lru_cache on get_config
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
-    config_mod.get_config.cache_clear()
-
-    # Mock get_config to return our test config
-    def mock_get_config(**kwargs: Any) -> Config:
-        return MockConfig()
-
-    # Patch in both modules to ensure the mock is used
-    monkeypatch.setattr(config_mod, "get_config", mock_get_config)
-    monkeypatch.setattr(config_show, "get_config", mock_get_config)
+    monkeypatch.setattr(config_mod, "get_config", get_mock)
+    monkeypatch.setattr(config_show, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config"])
 
@@ -354,34 +334,26 @@ def test_when_config_is_invoked_with_mocked_data_it_displays_sections(
 def test_when_config_is_invoked_with_json_format_and_section_it_shows_section(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
+    mock_config_factory: Any,
+    clear_config_cache: None,
 ) -> None:
-    """Test JSON format with specific section."""
-    from lib_layered_config import Config
+    """Verify JSON format displays specific section content."""
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+    from bitranox_template_cli_app_config_log_mail import config_show
 
-    test_config_data = {
+    test_data = {
         "email": {
             "smtp_hosts": ["smtp.test.com:587"],
             "from_address": "test@example.com",
         }
     }
+    mock_config = mock_config_factory(test_data)
 
-    class MockConfig(Config):
-        def __init__(self) -> None:
-            pass
+    def get_mock(**_kwargs: Any) -> Any:
+        return mock_config
 
-        def get(self, key: str, default: Any = None) -> Any:
-            return test_config_data.get(key, default)
-
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
-    config_mod.get_config.cache_clear()
-
-    def mock_get_config(**kwargs: Any) -> Config:
-        return MockConfig()
-
-    monkeypatch.setattr(config_mod, "get_config", mock_get_config)
-    monkeypatch.setattr(config_show, "get_config", mock_get_config)
+    monkeypatch.setattr(config_mod, "get_config", get_mock)
+    monkeypatch.setattr(config_show, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--format", "json", "--section", "email"])
 
@@ -395,33 +367,25 @@ def test_when_config_is_invoked_with_json_format_and_section_it_shows_section(
 def test_when_config_is_invoked_with_json_format_and_nonexistent_section_it_fails(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
+    mock_config_factory: Any,
+    clear_config_cache: None,
 ) -> None:
-    """Test JSON format with nonexistent section returns error."""
-    from lib_layered_config import Config
+    """Verify JSON format with nonexistent section returns error."""
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+    from bitranox_template_cli_app_config_log_mail import config_show
 
-    test_config_data = {
+    test_data = {
         "email": {
             "smtp_hosts": ["smtp.test.com:587"],
         }
     }
+    mock_config = mock_config_factory(test_data)
 
-    class MockConfig(Config):
-        def __init__(self) -> None:
-            pass
+    def get_mock(**_kwargs: Any) -> Any:
+        return mock_config
 
-        def get(self, key: str, default: Any = None) -> Any:
-            return test_config_data.get(key, default)
-
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
-    config_mod.get_config.cache_clear()
-
-    def mock_get_config(**kwargs: Any) -> Config:
-        return MockConfig()
-
-    monkeypatch.setattr(config_mod, "get_config", mock_get_config)
-    monkeypatch.setattr(config_show, "get_config", mock_get_config)
+    monkeypatch.setattr(config_mod, "get_config", get_mock)
+    monkeypatch.setattr(config_show, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--format", "json", "--section", "nonexistent"])
 
@@ -433,11 +397,14 @@ def test_when_config_is_invoked_with_json_format_and_nonexistent_section_it_fail
 def test_when_config_is_invoked_with_section_showing_complex_values(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
+    mock_config_factory: Any,
+    clear_config_cache: None,
 ) -> None:
-    """Test human format with section containing lists and dicts."""
-    from lib_layered_config import Config
+    """Verify human format with section containing lists and dicts."""
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+    from bitranox_template_cli_app_config_log_mail import config_show
 
-    test_config_data = {
+    test_data = {
         "email": {
             "smtp_hosts": ["smtp1.test.com:587", "smtp2.test.com:587"],
             "from_address": "test@example.com",
@@ -445,37 +412,22 @@ def test_when_config_is_invoked_with_section_showing_complex_values(
             "timeout": 60.0,
         }
     }
+    mock_config = mock_config_factory(test_data)
 
-    class MockConfig(Config):
-        def __init__(self) -> None:
-            pass
+    def get_mock(**_kwargs: Any) -> Any:
+        return mock_config
 
-        def get(self, key: str, default: Any = None) -> Any:
-            return test_config_data.get(key, default)
-
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
-    config_mod.get_config.cache_clear()
-
-    def mock_get_config(**kwargs: Any) -> Config:
-        return MockConfig()
-
-    monkeypatch.setattr(config_mod, "get_config", mock_get_config)
-    monkeypatch.setattr(config_show, "get_config", mock_get_config)
+    monkeypatch.setattr(config_mod, "get_config", get_mock)
+    monkeypatch.setattr(config_show, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--section", "email"])
 
     assert result.exit_code == 0
     assert "[email]" in result.output
     assert "smtp_hosts" in result.output
-    # List should be JSON formatted
     assert '["smtp1.test.com:587", "smtp2.test.com:587"]' in result.output or "smtp1.test.com:587" in result.output
-    # Dict should be JSON formatted
     assert "metadata" in result.output
-    # String should be quoted
     assert '"test@example.com"' in result.output
-    # Number should not be quoted
     assert "60.0" in result.output
 
 
@@ -483,11 +435,14 @@ def test_when_config_is_invoked_with_section_showing_complex_values(
 def test_when_config_shows_all_sections_with_complex_values(
     cli_runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
+    mock_config_factory: Any,
+    clear_config_cache: None,
 ) -> None:
-    """Test human format showing all sections with lists and dicts."""
-    from lib_layered_config import Config
+    """Verify human format showing all sections with lists and dicts."""
+    from bitranox_template_cli_app_config_log_mail import config as config_mod
+    from bitranox_template_cli_app_config_log_mail import config_show
 
-    test_config_data = {
+    test_data = {
         "email": {
             "smtp_hosts": ["smtp.test.com:587"],
             "tags": {"environment": "test", "version": "1.0"},
@@ -497,34 +452,21 @@ def test_when_config_shows_all_sections_with_complex_values(
             "handlers": ["console", "file"],
         },
     }
+    mock_config = mock_config_factory(test_data)
 
-    class MockConfig(Config):
-        def __init__(self) -> None:
-            pass
+    def get_mock(**_kwargs: Any) -> Any:
+        return mock_config
 
-        def as_dict(self) -> dict[str, Any]:
-            return test_config_data
-
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
-    config_mod.get_config.cache_clear()
-
-    def mock_get_config(**kwargs: Any) -> Config:
-        return MockConfig()
-
-    monkeypatch.setattr(config_mod, "get_config", mock_get_config)
-    monkeypatch.setattr(config_show, "get_config", mock_get_config)
+    monkeypatch.setattr(config_mod, "get_config", get_mock)
+    monkeypatch.setattr(config_show, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config"])
 
     assert result.exit_code == 0
     assert "[email]" in result.output
     assert "[logging]" in result.output
-    # Lists should be JSON formatted
     assert "smtp_hosts" in result.output
     assert "handlers" in result.output
-    # Dicts should be JSON formatted
     assert "tags" in result.output
 
 
