@@ -5,6 +5,14 @@ the [Keep a Changelog](https://keepachangelog.com/) format.
 
 
 
+## [0.2.1] - 2025-12-08
+
+### Changed
+- Updated `lib_cli_exit_tools` from >=2.1.0 to >=2.1.1
+- Updated `lib_log_rich` from >=5.5.0 to >=5.5.1
+- Updated `lib_layered_config` from >=4.0.0 to >=4.0.1
+- Updated `import-linter` dev dependency from >=2.7 to >=2.8
+
 ## [0.2.0] - 2025-12-07
 
 ### Added
