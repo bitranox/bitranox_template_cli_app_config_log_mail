@@ -19,10 +19,36 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from lib_layered_config import deploy_config
+from lib_layered_config.examples.deploy import DeployAction, DeployResult
 
 from . import __init__conf__
 from .config import get_default_config_path
 from .enums import DeployTarget
+
+_DEPLOYED_ACTIONS = frozenset({DeployAction.CREATED, DeployAction.OVERWRITTEN})
+
+
+def _extract_deployed_paths(results: list[DeployResult]) -> list[Path]:
+    """Extract destination paths from deploy results where files were actually deployed.
+
+    Filters results to only include paths where files were created or overwritten,
+    excluding skipped or kept files. Also recursively extracts paths from .d directory
+    deployments.
+
+    Args:
+        results: List of DeployResult objects from deploy_config.
+
+    Returns:
+        List of Path objects for files that were created or overwritten.
+    """
+    paths: list[Path] = []
+    for result in results:
+        if result.action in _DEPLOYED_ACTIONS:
+            paths.append(result.destination)
+        for dot_d_result in result.dot_d_results:
+            if dot_d_result.action in _DEPLOYED_ACTIONS:
+                paths.append(dot_d_result.destination)
+    return paths
 
 
 def deploy_configuration(
@@ -95,7 +121,7 @@ def deploy_configuration(
     # Convert enum values to strings for lib_layered_config
     target_strings = [t.value for t in targets]
 
-    deployed_paths = deploy_config(
+    results = deploy_config(
         source=source,
         vendor=__init__conf__.LAYEREDCONF_VENDOR,
         app=__init__conf__.LAYEREDCONF_APP,
@@ -105,7 +131,7 @@ def deploy_configuration(
         force=force,
     )
 
-    return deployed_paths
+    return _extract_deployed_paths(results)
 
 
 __all__ = [

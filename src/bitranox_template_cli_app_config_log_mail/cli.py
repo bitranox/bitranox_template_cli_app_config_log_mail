@@ -2,42 +2,26 @@
 
 Expose a stable command-line surface so tooling, documentation, and packaging
 automation can be exercised while the richer logging helpers are being built.
-By delegating to :mod:`bitranox_template_cli_app_config_log_mail.behaviors` the transport stays
-aligned with the Clean Code rules captured in
-``docs/systemdesign/module_reference.md``.
 
 Contents:
-    * :data:`CLICK_CONTEXT_SETTINGS` – shared Click settings ensuring consistent
-      ``--help`` behavior across commands.
-    * :func:`apply_traceback_preferences` – helper that synchronises the shared
-      traceback configuration flags.
-    * :func:`snapshot_traceback_state` / :func:`restore_traceback_state` – utilities
-      for preserving and reapplying the global traceback preference.
-    * :func:`cli` – root command group wiring the global options.
-    * :func:`cli_main` – default action when no subcommand is provided.
-    * :func:`cli_info`, :func:`cli_hello`, :func:`cli_fail` – subcommands covering
-      metadata printing, success path, and failure path.
-    * :func:`_record_traceback_choice`, :func:`_announce_traceback_choice` – persist
-      traceback preferences across context and shared tooling.
-    * :func:`_invoke_cli`, :func:`_current_traceback_mode`, :func:`_traceback_limit`,
-      :func:`_print_exception`, :func:`_run_cli_via_exit_tools` – isolate the error
-      handling and delegation path.
-    * :func:`_restore_when_requested` – restores tracebacks when ``main`` finishes.
-    * :func:`main` – composition helper delegating to ``lib_cli_exit_tools`` while
-      honouring the shared traceback preferences.
+    * :data:`CLICK_CONTEXT_SETTINGS` – shared Click settings.
+    * :func:`apply_traceback_preferences` – synchronises traceback configuration.
+    * :func:`snapshot_traceback_state` / :func:`restore_traceback_state` – state management.
+    * :func:`cli` – root command group wiring global options.
+    * :func:`main` – entry point for console scripts and ``python -m`` execution.
 
 System Role:
     The CLI is the primary adapter for local development workflows; packaging
     targets register the console script defined in :mod:`bitranox_template_cli_app_config_log_mail.__init__conf__`.
-    Other transports (including ``python -m`` execution) reuse the same helpers so
-    behaviour remains consistent regardless of entry point.
 """
 
 from __future__ import annotations
+
 import logging
 from typing import Final, Optional, Sequence, Tuple
 
 import rich_click as click
+from lib_layered_config import Config
 
 import lib_cli_exit_tools
 import lib_log_rich.runtime
@@ -66,23 +50,14 @@ logger = logging.getLogger(__name__)
 def apply_traceback_preferences(enabled: bool) -> None:
     """Synchronise shared traceback flags with the requested preference.
 
-    ``lib_cli_exit_tools`` inspects global flags to decide whether tracebacks
-    should be truncated and whether colour should be forced. Updating both
-    attributes together ensures the ``--traceback`` flag behaves the same for
-    console scripts and ``python -m`` execution.
-
     Args:
-        enabled: ``True`` enables full tracebacks with colour. ``False`` restores
-            the compact summary mode.
+        enabled: ``True`` enables full tracebacks with colour.
 
     Example:
         >>> apply_traceback_preferences(True)
         >>> bool(lib_cli_exit_tools.config.traceback)
         True
-        >>> bool(lib_cli_exit_tools.config.traceback_force_color)
-        True
     """
-
     lib_cli_exit_tools.config.traceback = bool(enabled)
     lib_cli_exit_tools.config.traceback_force_color = bool(enabled)
 
@@ -92,13 +67,7 @@ def snapshot_traceback_state() -> TracebackState:
 
     Returns:
         Tuple of ``(traceback_enabled, force_color)``.
-
-    Example:
-        >>> snapshot = snapshot_traceback_state()
-        >>> isinstance(snapshot, tuple)
-        True
     """
-
     return (
         bool(getattr(lib_cli_exit_tools.config, "traceback", False)),
         bool(getattr(lib_cli_exit_tools.config, "traceback_force_color", False)),
@@ -110,212 +79,53 @@ def restore_traceback_state(state: TracebackState) -> None:
 
     Args:
         state: Tuple returned by :func:`snapshot_traceback_state`.
-
-    Example:
-        >>> prev = snapshot_traceback_state()
-        >>> apply_traceback_preferences(True)
-        >>> restore_traceback_state(prev)
-        >>> snapshot_traceback_state() == prev
-        True
     """
-
     lib_cli_exit_tools.config.traceback = bool(state[0])
     lib_cli_exit_tools.config.traceback_force_color = bool(state[1])
 
 
-def _record_traceback_choice(ctx: click.Context, *, enabled: bool) -> None:
-    """Remember the chosen traceback mode inside the Click context.
-
-    Downstream commands need to know whether verbose tracebacks were
-    requested so they can honour the user's preference without re-parsing
-    flags. Ensures the context has a dict backing store and persists the boolean
-    under the ``"traceback"`` key.
-
-    Args:
-        ctx: Click context associated with the current invocation.
-        enabled: ``True`` when verbose tracebacks were requested; ``False`` otherwise.
-
-    Side Effects:
-        Mutates ``ctx.obj``.
-    """
-
-    ctx.ensure_object(dict)
-    ctx.obj["traceback"] = enabled
-
-
-def _announce_traceback_choice(enabled: bool) -> None:
-    """Keep ``lib_cli_exit_tools`` in sync with the selected traceback mode.
-
-    ``lib_cli_exit_tools`` reads global configuration to decide how to print
-    tracebacks; we mirror the user's choice into that configuration.
-
-    Args:
-        enabled: ``True`` when verbose tracebacks should be shown; ``False`` when the
-            summary view is desired.
-
-    Side Effects:
-        Mutates ``lib_cli_exit_tools.config``.
-    """
-
-    apply_traceback_preferences(enabled)
-
-
-def _no_subcommand_requested(ctx: click.Context) -> bool:
-    """Return ``True`` when the invocation did not name a subcommand.
-
-    The CLI defaults to calling ``noop_main`` when no subcommand appears; we
-    need a readable predicate to capture that intent.
-
-    Args:
-        ctx: Click context describing the current CLI invocation.
-
-    Returns:
-        ``True`` when no subcommand was invoked; ``False`` otherwise.
-    """
-
-    return ctx.invoked_subcommand is None
-
-
-def _invoke_cli(argv: Optional[Sequence[str]]) -> int:
-    """Ask ``lib_cli_exit_tools`` to execute the Click command.
-
-    ``lib_cli_exit_tools`` normalises exit codes and exception handling; we
-    centralise the call so tests can stub it cleanly.
-
-    Args:
-        argv: Optional sequence of command-line arguments. ``None`` delegates to
-            ``sys.argv`` inside ``lib_cli_exit_tools``.
-
-    Returns:
-        Exit code returned by the CLI execution.
-    """
-
-    return lib_cli_exit_tools.run_cli(
-        cli,
-        argv=list(argv) if argv is not None else None,
-        prog_name=__init__conf__.shell_command,
-    )
-
-
-def _current_traceback_mode() -> bool:
-    """Return the global traceback preference as a boolean.
-
-    Error handling logic needs to know whether verbose tracebacks are active
-    so it can pick the right character budget and ensure colouring is
-    consistent.
-
-    Returns:
-        ``True`` when verbose tracebacks are enabled; ``False`` otherwise.
-    """
-
-    return bool(getattr(lib_cli_exit_tools.config, "traceback", False))
-
-
-def _traceback_limit(tracebacks_enabled: bool, *, summary_limit: int, verbose_limit: int) -> int:
-    """Return the character budget that matches the current traceback mode.
-
-    Verbose tracebacks should show the full story while compact ones keep the
-    terminal tidy. This helper makes that decision explicit.
-
-    Args:
-        tracebacks_enabled: ``True`` when verbose tracebacks are active.
-        summary_limit: Character budget for truncated output.
-        verbose_limit: Character budget for the full traceback.
-
-    Returns:
-        The applicable character limit.
-    """
-
-    return verbose_limit if tracebacks_enabled else summary_limit
-
-
-def _print_exception(exc: BaseException, *, tracebacks_enabled: bool, length_limit: int) -> int:
-    """Render the exception through ``lib_cli_exit_tools`` and return its exit code.
-
-    All transports funnel errors through ``lib_cli_exit_tools`` so that exit
-    codes and formatting stay consistent; this helper keeps the plumbing in
-    one place.
-
-    Args:
-        exc: Exception raised by the CLI.
-        tracebacks_enabled: ``True`` when verbose tracebacks should be shown.
-        length_limit: Maximum number of characters to print.
-
-    Returns:
-        Exit code to surface to the shell.
-
-    Side Effects:
-        Writes the formatted exception to stderr via ``lib_cli_exit_tools``.
-    """
-
-    lib_cli_exit_tools.print_exception_message(
-        trace_back=tracebacks_enabled,
-        length_limit=length_limit,
-    )
-    return lib_cli_exit_tools.get_system_exit_code(exc)
-
-
-def _traceback_option_requested(ctx: click.Context) -> bool:
-    """Return ``True`` when the user explicitly requested ``--traceback``.
-
-    Determines whether a no-command invocation should run the default
-    behaviour or display the help screen.
-
-    Args:
-        ctx: Click context associated with the current invocation.
-
-    Returns:
-        ``True`` when the user provided ``--traceback`` or ``--no-traceback``;
-        ``False`` when the default value is in effect.
-    """
-
-    source = ctx.get_parameter_source("traceback")
-    return source not in (ParameterSource.DEFAULT, None)
-
-
-def _show_help(ctx: click.Context) -> None:
-    """Render the command help to stdout."""
-
-    click.echo(ctx.get_help())
-
-
-def _run_cli_via_exit_tools(
-    argv: Optional[Sequence[str]],
+def _store_cli_context(
+    ctx: click.Context,
     *,
-    summary_limit: int,
-    verbose_limit: int,
-) -> int:
-    """Run the command while narrating the failure path with care.
-
-    Consolidates the call to ``lib_cli_exit_tools`` so happy paths and error
-    handling remain consistent across the application and tests.
+    traceback: bool,
+    config: Config,
+    profile: Optional[str] = None,
+) -> None:
+    """Store CLI state in the Click context for subcommand access.
 
     Args:
-        argv: Optional sequence of CLI arguments.
-        summary_limit: Character budget for truncated exception output.
-        verbose_limit: Character budget for verbose exception output.
+        ctx: Click context associated with the current invocation.
+        traceback: Whether verbose tracebacks were requested.
+        config: Loaded layered configuration object for all subcommands.
+        profile: Optional configuration profile name.
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["traceback"] = traceback
+    ctx.obj["config"] = config
+    ctx.obj["profile"] = profile
+
+
+def _run_cli(argv: Optional[Sequence[str]]) -> int:
+    """Execute the CLI via lib_cli_exit_tools with exception handling.
+
+    Args:
+        argv: Optional sequence of CLI arguments. None uses sys.argv.
 
     Returns:
         Exit code produced by the command.
-
-    Side Effects:
-        Delegates to ``lib_cli_exit_tools`` which may write to stderr.
     """
-
     try:
-        return _invoke_cli(argv)
-    except BaseException as exc:  # noqa: BLE001 - handled by shared printers
-        tracebacks_enabled = _current_traceback_mode()
-        apply_traceback_preferences(tracebacks_enabled)
-        return _print_exception(
-            exc,
-            tracebacks_enabled=tracebacks_enabled,
-            length_limit=_traceback_limit(
-                tracebacks_enabled,
-                summary_limit=summary_limit,
-                verbose_limit=verbose_limit,
-            ),
+        return lib_cli_exit_tools.run_cli(
+            cli,
+            argv=list(argv) if argv is not None else None,
+            prog_name=__init__conf__.shell_command,
         )
+    except BaseException as exc:  # noqa: BLE001 - handled by shared printers
+        tracebacks_enabled = bool(getattr(lib_cli_exit_tools.config, "traceback", False))
+        apply_traceback_preferences(tracebacks_enabled)
+        length_limit = TRACEBACK_VERBOSE_LIMIT if tracebacks_enabled else TRACEBACK_SUMMARY_LIMIT
+        lib_cli_exit_tools.print_exception_message(trace_back=tracebacks_enabled, length_limit=length_limit)
+        return lib_cli_exit_tools.get_system_exit_code(exc)
 
 
 @click.group(
@@ -334,26 +144,19 @@ def _run_cli_via_exit_tools(
     default=False,
     help="Show full Python traceback on errors",
 )
+@click.option(
+    "--profile",
+    type=str,
+    default=None,
+    help="Load configuration from a named profile (e.g., 'production', 'test')",
+)
 @click.pass_context
-def cli(ctx: click.Context, traceback: bool) -> None:
+def cli(ctx: click.Context, traceback: bool, profile: Optional[str]) -> None:
     """Root command storing global flags and syncing shared traceback state.
 
-    The CLI must provide a switch for verbose tracebacks so developers can
-    toggle diagnostic depth without editing configuration files. Ensures a
-    dict-based context, stores the ``traceback`` flag, and mirrors the value
-    into ``lib_cli_exit_tools.config`` so downstream helpers observe the
-    preference. When no subcommand (or options) are provided, the command
-    prints help instead of running the domain stub; otherwise the default
-    action delegates to :func:`cli_main`.
-
-    Args:
-        ctx: Click context for the command invocation.
-        traceback: Enable verbose tracebacks when ``True``.
-
-    Side Effects:
-        Mutates :mod:`lib_cli_exit_tools.config` to reflect the requested
-        traceback mode, including ``traceback_force_color`` when tracebacks are
-        enabled. Initializes lib_log_rich runtime if needed.
+    Loads configuration once with the profile and stores it in the Click context
+    for all subcommands to access. Mirrors the traceback flag into
+    ``lib_cli_exit_tools.config`` so downstream helpers observe the preference.
 
     Example:
         >>> from click.testing import CliRunner
@@ -364,40 +167,28 @@ def cli(ctx: click.Context, traceback: bool) -> None:
         >>> "Hello World" in result.output
         True
     """
+    config = get_config(profile=profile)
+    init_logging(config)
+    _store_cli_context(ctx, traceback=traceback, config=config, profile=profile)
+    apply_traceback_preferences(traceback)
 
-    # Initialize logging before any commands execute
-    init_logging()
-
-    _record_traceback_choice(ctx, enabled=traceback)
-    _announce_traceback_choice(traceback)
-    if _no_subcommand_requested(ctx):
-        if _traceback_option_requested(ctx):
+    if ctx.invoked_subcommand is None:
+        # No subcommand: show help unless --traceback was explicitly passed
+        source = ctx.get_parameter_source("traceback")
+        if source not in (ParameterSource.DEFAULT, None):
             cli_main()
         else:
-            _show_help(ctx)
+            click.echo(ctx.get_help())
 
 
 def cli_main() -> None:
-    """Run the placeholder domain entry when callers opt into execution.
-
-    Maintains compatibility with tooling that expects the original
-    "do-nothing" behaviour by explicitly opting in via options (e.g.
-    ``--traceback`` without subcommands).
-
-    Side Effects:
-        Delegates to :func:`noop_main`.
-
-    Example:
-        >>> cli_main()
-    """
-
+    """Run the placeholder domain entry when callers opt into execution."""
     noop_main()
 
 
 @cli.command("info", context_settings=CLICK_CONTEXT_SETTINGS)
 def cli_info() -> None:
     """Print resolved metadata so users can inspect installation details."""
-
     with lib_log_rich.runtime.bind(job_id="cli-info", extra={"command": "info"}):
         logger.info("Displaying package information")
         __init__conf__.print_info()
@@ -406,7 +197,6 @@ def cli_info() -> None:
 @cli.command("hello", context_settings=CLICK_CONTEXT_SETTINGS)
 def cli_hello() -> None:
     """Demonstrate the success path by emitting the canonical greeting."""
-
     with lib_log_rich.runtime.bind(job_id="cli-hello", extra={"command": "hello"}):
         logger.info("Executing hello command")
         emit_greeting()
@@ -415,7 +205,6 @@ def cli_hello() -> None:
 @cli.command("fail", context_settings=CLICK_CONTEXT_SETTINGS)
 def cli_fail() -> None:
     """Trigger the intentional failure helper to test error handling."""
-
     with lib_log_rich.runtime.bind(job_id="cli-fail", extra={"command": "fail"}):
         logger.warning("Executing intentional failure command")
         raise_intentional_failure()
@@ -438,28 +227,30 @@ def cli_fail() -> None:
     "--profile",
     type=str,
     default=None,
-    help="Load configuration from a named profile (e.g., 'production', 'test')",
+    help="Override profile from root command (e.g., 'production', 'test')",
 )
-def cli_config(format: str, section: Optional[str], profile: Optional[str]) -> None:
+@click.pass_context
+def cli_config(ctx: click.Context, format: str, section: Optional[str], profile: Optional[str]) -> None:
     """Display the current merged configuration from all sources.
 
-    Shows configuration loaded from:
-    - Default config (built-in)
-    - Application config (/etc/xdg/bitranox-template-cli-app-config-log-mail/config.toml)
-    - User config (~/.config/bitranox-template-cli-app-config-log-mail/config.toml)
-    - .env files
-    - Environment variables (BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_*)
+    Shows configuration loaded from defaults, application/user config files,
+    .env files, and environment variables.
 
-    Precedence: defaults → app → host → user → dotenv → env
-
-    When --profile is specified, configuration is loaded from profile-specific
-    subdirectories (e.g., ~/.config/slug/profile/<name>/config.toml).
+    Precedence: defaults -> app -> host -> user -> dotenv -> env
     """
+    # Use config from context; reload if profile override specified
+    if profile:
+        config = get_config(profile=profile)
+        effective_profile = profile
+    else:
+        config = ctx.obj["config"]
+        effective_profile = ctx.obj.get("profile")
+
     output_format = OutputFormat(format.lower())
-    extra = {"command": "config", "format": output_format.value, "profile": profile}
+    extra = {"command": "config", "format": output_format.value, "profile": effective_profile}
     with lib_log_rich.runtime.bind(job_id="cli-config", extra=extra):
-        logger.info("Displaying configuration", extra={"format": output_format.value, "section": section, "profile": profile})
-        display_config(format=output_format, section=section, profile=profile)
+        logger.info("Displaying configuration", extra={"format": output_format.value, "section": section, "profile": effective_profile})
+        display_config(config, format=output_format, section=section)
 
 
 @cli.command("config-deploy", context_settings=CLICK_CONTEXT_SETTINGS)
@@ -481,9 +272,10 @@ def cli_config(format: str, section: Optional[str], profile: Optional[str]) -> N
     "--profile",
     type=str,
     default=None,
-    help="Deploy to a named profile directory (e.g., 'production', 'test')",
+    help="Override profile from root command (e.g., 'production', 'test')",
 )
-def cli_config_deploy(targets: tuple[str, ...], force: bool, profile: Optional[str]) -> None:
+@click.pass_context
+def cli_config_deploy(ctx: click.Context, targets: tuple[str, ...], force: bool, profile: Optional[str]) -> None:
     r"""Deploy default configuration to system or user directories.
 
     Creates configuration files in platform-specific locations:
@@ -494,38 +286,20 @@ def cli_config_deploy(targets: tuple[str, ...], force: bool, profile: Optional[s
     - user: User-specific config (~/.config on Linux)
 
     By default, existing files are not overwritten. Use --force to overwrite.
-
-    When --profile is specified, configuration is deployed to profile-specific
-    subdirectories (e.g., ~/.config/slug/profile/<name>/config.toml).
-
-    Examples:
-        \b
-        # Deploy to user config directory
-        $ bitranox-template-cli-app-config-log-mail config-deploy --target user
-
-        \b
-        # Deploy to both app and user directories
-        $ bitranox-template-cli-app-config-log-mail config-deploy --target app --target user
-
-        \b
-        # Force overwrite existing config
-        $ bitranox-template-cli-app-config-log-mail config-deploy --target user --force
-
-        \b
-        # Deploy to production profile
-        $ bitranox-template-cli-app-config-log-mail config-deploy --target user --profile production
     """
+    effective_profile = profile if profile else ctx.obj.get("profile")
     deploy_targets = tuple(DeployTarget(t.lower()) for t in targets)
     target_values = tuple(t.value for t in deploy_targets)
-    extra = {"command": "config-deploy", "targets": target_values, "force": force, "profile": profile}
+    extra = {"command": "config-deploy", "targets": target_values, "force": force, "profile": effective_profile}
+
     with lib_log_rich.runtime.bind(job_id="cli-config-deploy", extra=extra):
-        logger.info("Deploying configuration", extra={"targets": target_values, "force": force, "profile": profile})
+        logger.info("Deploying configuration", extra={"targets": target_values, "force": force, "profile": effective_profile})
 
         try:
-            deployed_paths = deploy_configuration(targets=deploy_targets, force=force, profile=profile)
+            deployed_paths = deploy_configuration(targets=deploy_targets, force=force, profile=effective_profile)
 
             if deployed_paths:
-                profile_msg = f" (profile: {profile})" if profile else ""
+                profile_msg = f" (profile: {effective_profile})" if effective_profile else ""
                 click.echo(f"\nConfiguration deployed successfully{profile_msg}:")
                 for path in deployed_paths:
                     click.echo(f"  ✓ {path}")
@@ -534,95 +308,54 @@ def cli_config_deploy(targets: tuple[str, ...], force: bool, profile: Optional[s
                 click.echo("Use --force to overwrite existing configuration files.")
 
         except PermissionError as exc:
-            logger.error("Permission denied when deploying configuration", extra={"error": str(exc), "profile": profile})
+            logger.error("Permission denied when deploying configuration", extra={"error": str(exc)})
             click.echo(f"\nError: Permission denied. {exc}", err=True)
             click.echo("Hint: System-wide deployment (--target app/host) may require sudo.", err=True)
             raise SystemExit(1)
         except Exception as exc:
-            logger.error("Failed to deploy configuration", extra={"error": str(exc), "error_type": type(exc).__name__, "profile": profile})
+            logger.error("Failed to deploy configuration", extra={"error": str(exc), "error_type": type(exc).__name__})
             click.echo(f"\nError: Failed to deploy configuration: {exc}", err=True)
             raise SystemExit(1)
 
 
-def main(
-    argv: Optional[Sequence[str]] = None,
-    *,
-    restore_traceback: bool = True,
-    summary_limit: int = TRACEBACK_SUMMARY_LIMIT,
-    verbose_limit: int = TRACEBACK_VERBOSE_LIMIT,
-) -> int:
-    """Execute the CLI with deliberate error handling and return the exit code.
+def main(argv: Optional[Sequence[str]] = None, *, restore_traceback: bool = True) -> int:
+    """Execute the CLI with error handling and return the exit code.
 
     Provides the single entry point used by console scripts and
-    ``python -m`` execution so that behaviour stays identical across
-    transports.
+    ``python -m`` execution so that behaviour stays identical across transports.
 
     Args:
-        argv: Optional sequence of CLI arguments. ``None`` lets Click consume
-            ``sys.argv`` directly.
-        restore_traceback: ``True`` to restore the prior ``lib_cli_exit_tools`` traceback
-            configuration after execution.
-        summary_limit: Character budget for truncated exception output.
-        verbose_limit: Character budget for verbose exception output.
+        argv: Optional sequence of CLI arguments. None uses sys.argv.
+        restore_traceback: Whether to restore prior traceback configuration after execution.
 
     Returns:
         Exit code reported by the CLI run.
-
-    Side Effects:
-        Mutates the global traceback configuration while the CLI runs.
-        Initializes and shuts down the lib_log_rich runtime.
     """
-
-    init_logging()
     previous_state = snapshot_traceback_state()
     try:
-        return _run_cli_via_exit_tools(
-            argv,
-            summary_limit=summary_limit,
-            verbose_limit=verbose_limit,
-        )
+        return _run_cli(argv)
     finally:
-        _restore_when_requested(previous_state, restore_traceback)
-        lib_log_rich.runtime.shutdown()
+        if restore_traceback:
+            restore_traceback_state(previous_state)
+        if lib_log_rich.runtime.is_initialised():
+            lib_log_rich.runtime.shutdown()
+
+
+# =============================================================================
+# Email Commands
+# =============================================================================
 
 
 @cli.command("send-email", context_settings=CLICK_CONTEXT_SETTINGS)
-@click.option(
-    "--to",
-    "recipients",
-    multiple=True,
-    required=True,
-    help="Recipient email address (can specify multiple)",
-)
-@click.option(
-    "--subject",
-    required=True,
-    help="Email subject line",
-)
-@click.option(
-    "--body",
-    default="",
-    help="Plain-text email body",
-)
-@click.option(
-    "--body-html",
-    default="",
-    help="HTML email body (sent as multipart with plain text)",
-)
-@click.option(
-    "--from",
-    "from_address",
-    default=None,
-    help="Override sender address (uses config default if not specified)",
-)
-@click.option(
-    "--attachment",
-    "attachments",
-    multiple=True,
-    type=click.Path(exists=True, path_type=str),
-    help="File to attach (can specify multiple)",
-)
+@click.option("--to", "recipients", multiple=True, required=True, help="Recipient email address (can specify multiple)")
+@click.option("--subject", required=True, help="Email subject line")
+@click.option("--body", default="", help="Plain-text email body")
+@click.option("--body-html", default="", help="HTML email body (sent as multipart with plain text)")
+@click.option("--from", "from_address", default=None, help="Override sender address (uses config default if not specified)")
+@click.option("--attachment", "attachments", multiple=True, type=click.Path(exists=True, path_type=str), help="File to attach (can specify multiple)")
+@click.pass_context
 def cli_send_email(
+    ctx: click.Context,
     recipients: tuple[str, ...],
     subject: str,
     body: str,
@@ -630,50 +363,14 @@ def cli_send_email(
     from_address: Optional[str],
     attachments: tuple[str, ...],
 ) -> None:
-    r"""Send an email using configured SMTP settings.
-
-    Loads email configuration from layered config sources:
-    - Default config (built-in)
-    - Application/User config files
-    - Environment variables (BITRANOX_TEMPLATE_CLI_APP_CONFIG_LOG_MAIL_EMAIL_*)
-
-    Examples:
-        \b
-        # Send simple text email
-        $ bitranox-template-cli-app-config-log-mail send-email \
-            --to recipient@example.com \
-            --subject "Test Email" \
-            --body "Hello from CLI"
-
-        \b
-        # Send to multiple recipients with HTML
-        $ bitranox-template-cli-app-config-log-mail send-email \
-            --to user1@example.com \
-            --to user2@example.com \
-            --subject "HTML Email" \
-            --body "Plain text version" \
-            --body-html "<h1>HTML Version</h1>"
-
-        \b
-        # Send with attachments
-        $ bitranox-template-cli-app-config-log-mail send-email \
-            --to admin@example.com \
-            --subject "Report" \
-            --body "See attached" \
-            --attachment report.pdf \
-            --attachment data.csv
-    """
+    """Send an email using configured SMTP settings."""
     from pathlib import Path
 
-    with lib_log_rich.runtime.bind(
-        job_id="cli-send-email",
-        extra={"command": "send-email", "recipients": list(recipients), "subject": subject},
-    ):
-        try:
-            # Load and validate email configuration
-            email_config = _load_and_validate_email_config()
+    config: Config = ctx.obj["config"]
 
-            # Convert attachment paths
+    with lib_log_rich.runtime.bind(job_id="cli-send-email", extra={"command": "send-email", "recipients": list(recipients), "subject": subject}):
+        try:
+            email_config = _load_and_validate_email_config(config)
             attachment_paths = [Path(p) for p in attachments] if attachments else None
 
             logger.info(
@@ -686,7 +383,6 @@ def cli_send_email(
                 },
             )
 
-            # Send email
             result = send_email(
                 config=email_config,
                 recipients=list(recipients),
@@ -717,74 +413,31 @@ def cli_send_email(
             click.echo(f"\nError: Failed to send email - {exc}", err=True)
             raise SystemExit(1)
         except Exception as exc:
-            logger.error(
-                "Unexpected error sending email",
-                extra={"error": str(exc), "error_type": type(exc).__name__},
-                exc_info=True,
-            )
+            logger.error("Unexpected error sending email", extra={"error": str(exc), "error_type": type(exc).__name__}, exc_info=True)
             click.echo(f"\nError: Unexpected error - {exc}", err=True)
             raise SystemExit(1)
 
 
 @cli.command("send-notification", context_settings=CLICK_CONTEXT_SETTINGS)
-@click.option(
-    "--to",
-    "recipients",
-    multiple=True,
-    required=True,
-    help="Recipient email address (can specify multiple)",
-)
-@click.option(
-    "--subject",
-    required=True,
-    help="Notification subject line",
-)
-@click.option(
-    "--message",
-    required=True,
-    help="Notification message (plain text)",
-)
+@click.option("--to", "recipients", multiple=True, required=True, help="Recipient email address (can specify multiple)")
+@click.option("--subject", required=True, help="Notification subject line")
+@click.option("--message", required=True, help="Notification message (plain text)")
+@click.pass_context
 def cli_send_notification(
+    ctx: click.Context,
     recipients: tuple[str, ...],
     subject: str,
     message: str,
 ) -> None:
-    r"""Send a simple plain-text notification email.
+    """Send a simple plain-text notification email."""
+    config: Config = ctx.obj["config"]
 
-    Convenience command for sending simple notifications without HTML or attachments.
-    Uses the same configuration as send-email.
-
-    Examples:
-        \b
-        # Send simple notification
-        $ bitranox-template-cli-app-config-log-mail send-notification \
-            --to admin@example.com \
-            --subject "System Alert" \
-            --message "Deployment completed successfully"
-
-        \b
-        # Send to multiple recipients
-        $ bitranox-template-cli-app-config-log-mail send-notification \
-            --to ops@example.com \
-            --to dev@example.com \
-            --subject "Service Status" \
-            --message "All services operational"
-    """
-
-    with lib_log_rich.runtime.bind(
-        job_id="cli-send-notification",
-        extra={"command": "send-notification", "recipients": list(recipients), "subject": subject},
-    ):
+    with lib_log_rich.runtime.bind(job_id="cli-send-notification", extra={"command": "send-notification", "recipients": list(recipients), "subject": subject}):
         try:
-            # Load and validate email configuration
-            email_config = _load_and_validate_email_config()
+            email_config = _load_and_validate_email_config(config)
 
-            logger.info(
-                "Sending notification",
-                extra={"recipients": list(recipients), "subject": subject},
-            )
+            logger.info("Sending notification", extra={"recipients": list(recipients), "subject": subject})
 
-            # Send notification
             result = send_notification(
                 config=email_config,
                 recipients=list(recipients),
@@ -808,66 +461,29 @@ def cli_send_notification(
             click.echo(f"\nError: Failed to send notification - {exc}", err=True)
             raise SystemExit(1)
         except Exception as exc:
-            logger.error(
-                "Unexpected error sending notification",
-                extra={"error": str(exc), "error_type": type(exc).__name__},
-                exc_info=True,
-            )
+            logger.error("Unexpected error sending notification", extra={"error": str(exc), "error_type": type(exc).__name__}, exc_info=True)
             click.echo(f"\nError: Unexpected error - {exc}", err=True)
             raise SystemExit(1)
 
 
-def _load_and_validate_email_config() -> EmailConfig:
-    """Load email config and validate SMTP hosts are configured.
+def _load_and_validate_email_config(config: Config) -> EmailConfig:
+    """Extract and validate email config from the provided Config object.
 
-    Centralizes the common pattern of loading email configuration and
-    validating that SMTP hosts are configured. Used by both send-email
-    and send-notification commands.
+    Args:
+        config: Already-loaded layered configuration object.
 
     Returns:
         EmailConfig with validated SMTP configuration.
 
     Raises:
         SystemExit: When SMTP hosts are not configured (exit code 1).
-
-    Side Effects:
-        Logs error and prints user-friendly message to stderr when
-        configuration is invalid.
     """
-    config = get_config()
     email_config = load_email_config_from_dict(config.as_dict())
 
     if not email_config.smtp_hosts:
         logger.error("No SMTP hosts configured")
-        click.echo(
-            "\nError: No SMTP hosts configured. Please configure email.smtp_hosts in your config file.",
-            err=True,
-        )
-        click.echo(
-            "See: bitranox-template-cli-app-config-log-mail config-deploy --target user",
-            err=True,
-        )
+        click.echo("\nError: No SMTP hosts configured. Please configure email.smtp_hosts in your config file.", err=True)
+        click.echo("See: bitranox-template-cli-app-config-log-mail config-deploy --target user", err=True)
         raise SystemExit(1)
 
     return email_config
-
-
-def _restore_when_requested(state: TracebackState, should_restore: bool) -> None:
-    """Restore the prior traceback configuration when requested.
-
-    CLI execution may toggle verbose tracebacks for the duration of the run.
-    Once the command ends we restore the previous configuration so other
-    code paths continue with their expected defaults.
-
-    Args:
-        state: Tuple captured by :func:`snapshot_traceback_state` describing the
-            prior configuration.
-        should_restore: ``True`` to reapply the stored configuration; ``False`` to keep the
-            current settings.
-
-    Side Effects:
-        May mutate ``lib_cli_exit_tools.config``.
-    """
-
-    if should_restore:
-        restore_traceback_state(state)

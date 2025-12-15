@@ -19,32 +19,30 @@ import json
 from typing import Any, cast
 
 import click
+from lib_layered_config import Config
 
-from .config import get_config
 from .enums import OutputFormat
 
 
 def display_config(
+    config: Config,
     *,
     format: OutputFormat = OutputFormat.HUMAN,
     section: str | None = None,
-    profile: str | None = None,
 ) -> None:
-    """Display the current merged configuration from all sources.
+    """Display the provided configuration in the requested format.
 
     Users need visibility into the effective configuration loaded from
     defaults, app configs, host configs, user configs, .env files, and
-    environment variables. Loads configuration via get_config() and outputs
-    it in the requested format.
+    environment variables. Outputs the provided Config object in the
+    requested format.
 
     Args:
+        config: Already-loaded layered configuration object to display.
         format: Output format: OutputFormat.HUMAN for TOML-like display or
             OutputFormat.JSON for JSON. Defaults to OutputFormat.HUMAN.
         section: Optional section name to display only that section. When None,
             displays all configuration.
-        profile: Optional profile name for environment isolation. When specified,
-            loads configuration from profile-specific subdirectories
-            (e.g., ~/.config/slug/profile/<name>/config.toml).
 
     Side Effects:
         Writes formatted configuration to stdout via click.echo().
@@ -56,22 +54,21 @@ def display_config(
         suitable for parsing by other tools.
 
     Example:
-        >>> display_config()  # doctest: +SKIP
+        >>> from bitranox_template_cli_app_config_log_mail.config import get_config
+        >>> config = get_config()  # doctest: +SKIP
+        >>> display_config(config)  # doctest: +SKIP
         [lib_log_rich]
           service = "bitranox_template_cli_app_config_log_mail"
           environment = "prod"
 
-        >>> display_config(format=OutputFormat.JSON)  # doctest: +SKIP
+        >>> display_config(config, format=OutputFormat.JSON)  # doctest: +SKIP
         {
           "lib_log_rich": {
             "service": "bitranox_template_cli_app_config_log_mail",
             "environment": "prod"
           }
         }
-
-        >>> display_config(profile="production")  # doctest: +SKIP
     """
-    config = get_config(profile=profile)
 
     # Output in requested format
     if format == OutputFormat.JSON:

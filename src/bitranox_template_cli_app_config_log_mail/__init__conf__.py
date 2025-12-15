@@ -24,7 +24,7 @@ name = "bitranox_template_cli_app_config_log_mail"
 #: Human-readable summary shown in CLI help output.
 title = "Template CLI application with configuration management and structured logging"
 #: Current release version pulled from ``pyproject.toml`` by automation.
-version = "0.2.1"
+version = "0.2.2"
 #: Repository homepage presented to users.
 homepage = "https://github.com/bitranox/bitranox_template_cli_app_config_log_mail"
 #: Author attribution surfaced in CLI output.
@@ -45,16 +45,18 @@ LAYEREDCONF_SLUG: str = "bitranox-template-cli-app-config-log-mail"
 def print_info() -> None:
     """Print the summarised metadata block used by the CLI ``info`` command.
 
-    Provides a single, auditable rendering function so documentation and
-    CLI output always match the system design reference.
+    Why
+        Provides a single, auditable rendering function so documentation and
+        CLI output always match the system design reference.
 
-    Side Effects:
+    Side Effects
         Writes to ``stdout``.
 
-    Example:
-        >>> print_info()  # doctest: +ELLIPSIS
-        Info for bitranox_template_cli_app_config_log_mail:
-        ...
+    Examples
+    --------
+    >>> print_info()  # doctest: +ELLIPSIS
+    Info for bitranox_template_cli_app_config_log_mail:
+    ...
     """
 
     fields = [

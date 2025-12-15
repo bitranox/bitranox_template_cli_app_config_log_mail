@@ -5,6 +5,29 @@ the [Keep a Changelog](https://keepachangelog.com/) format.
 
 
 
+## [0.2.2] - 2025-12-15
+
+### Added
+- Global `--profile` option on root CLI command for profile-specific configuration
+- Profile inheritance from root command to subcommands (`config`, `config-deploy`)
+
+### Changed
+- **BREAKING**: Refactored configuration loading - config is now loaded once in root CLI command
+  and stored in Click context (`ctx.obj["config"]`) for all subcommands to access
+- `init_logging()`, `_build_runtime_config()`, `_load_logging_config()` now accept `Config` object
+  instead of profile string
+- `display_config()` now accepts `Config` object as first parameter instead of profile
+- `_load_and_validate_email_config()` now accepts `Config` object instead of profile
+- Subcommand `--profile` options act as overrides that reload config when specified
+- Conditional `lib_log_rich.runtime.shutdown()` - only when runtime was initialized
+- Updated `actions/cache` from v4 to v5 in CI workflow
+- Updated `actions/upload-artifact` from v5 to v6 in release workflow
+
+### Fixed
+- Type compatibility with `lib_layered_config.deploy_config()` returning `list[DeployResult]`
+- All subcommands (`config`, `send-email`, `send-notification`) now correctly use profile-specific
+  configuration when `--profile` is specified on the root command
+
 ## [0.2.1] - 2025-12-08
 
 ### Changed

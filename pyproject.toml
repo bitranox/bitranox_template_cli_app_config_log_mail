@@ -1,15 +1,15 @@
 [project]
 name = "bitranox_template_cli_app_config_log_mail"
-version = "0.2.1"
+version = "0.2.2"
 description = "Template CLI application with configuration management and structured logging"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "rich-click>=1.9.4",
-    "lib_cli_exit_tools>=2.1.1",
-    "lib_log_rich>=5.5.1",
-    "lib_layered_config>=4.0.1",
-    "btx-lib-mail>=1.0.1",
+    "lib_cli_exit_tools>=2.2.2",
+    "lib_log_rich>=6.0.0",
+    "lib_layered_config>=5.1.0",
+    "btx-lib-mail>=1.0.2",
 ]
 license = { text = "MIT" }
 authors = [{ name = "bitranox", email = "bitranox@gmail.com" }]
@@ -32,15 +32,16 @@ Issues = "https://github.com/bitranox/bitranox_template_cli_app_config_log_mail/
 dev = [
   "pytest>=9.0.2",
   "pytest-cov>=7.0.0",
-  "ruff>=0.14.8",
+  "ruff>=0.14.9",
   "pyright>=1.1.407",
   "bandit>=1.9.2",
   "build>=1.3.0",
   "twine>=6.2.0",
   "codecov-cli>=11.2.6",
   "pip-audit>=2.10.0",
-  "textual>=6.8.0",
-  "import-linter>=2.8"
+  "textual>=6.9.0",
+  "import-linter>=2.9",
+  "rtoml>=0.13.0",
 ]
 
 [project.scripts]

@@ -27,7 +27,6 @@ import lib_log_rich.runtime
 import rich_click as click
 
 from . import __init__conf__, cli
-from .logging_setup import init_logging
 
 # Match the CLI defaults so truncation behaviour stays consistent across entry
 # points regardless of whether users call the console script or ``python -m``.
@@ -96,10 +95,10 @@ def _module_main() -> int:
         Exit code reported by the CLI run.
 
     Side Effects:
-        Initializes and shuts down the lib_log_rich runtime.
+        Logging initialization is deferred to cli() to support profile-specific
+        configuration. Shuts down lib_log_rich runtime on exit only if it was
+        initialized (e.g., --help exits before initialization).
     """
-
-    init_logging()
     try:
         with _open_cli_session() as run:
             return run(
@@ -107,7 +106,8 @@ def _module_main() -> int:
                 prog_name=_command_name(),
             )
     finally:
-        lib_log_rich.runtime.shutdown()
+        if lib_log_rich.runtime.is_initialised():
+            lib_log_rich.runtime.shutdown()
 
 
 if __name__ == "__main__":

@@ -305,9 +305,6 @@ def test_when_config_is_invoked_with_mocked_data_it_displays_sections(
     clear_config_cache: None,
 ) -> None:
     """Verify config displays sections from mocked configuration."""
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
     test_data = {
         "test_section": {
             "setting1": "value1",
@@ -319,8 +316,8 @@ def test_when_config_is_invoked_with_mocked_data_it_displays_sections(
     def get_mock(**_kwargs: Any) -> Any:
         return mock_config
 
-    monkeypatch.setattr(config_mod, "get_config", get_mock)
-    monkeypatch.setattr(config_show, "get_config", get_mock)
+    # Patch get_config in cli module where it's imported and used
+    monkeypatch.setattr(cli_mod, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config"])
 
@@ -338,9 +335,6 @@ def test_when_config_is_invoked_with_json_format_and_section_it_shows_section(
     clear_config_cache: None,
 ) -> None:
     """Verify JSON format displays specific section content."""
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
     test_data = {
         "email": {
             "smtp_hosts": ["smtp.test.com:587"],
@@ -352,8 +346,8 @@ def test_when_config_is_invoked_with_json_format_and_section_it_shows_section(
     def get_mock(**_kwargs: Any) -> Any:
         return mock_config
 
-    monkeypatch.setattr(config_mod, "get_config", get_mock)
-    monkeypatch.setattr(config_show, "get_config", get_mock)
+    # Patch get_config in cli module where it's imported and used
+    monkeypatch.setattr(cli_mod, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--format", "json", "--section", "email"])
 
@@ -371,9 +365,6 @@ def test_when_config_is_invoked_with_json_format_and_nonexistent_section_it_fail
     clear_config_cache: None,
 ) -> None:
     """Verify JSON format with nonexistent section returns error."""
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
     test_data = {
         "email": {
             "smtp_hosts": ["smtp.test.com:587"],
@@ -384,8 +375,8 @@ def test_when_config_is_invoked_with_json_format_and_nonexistent_section_it_fail
     def get_mock(**_kwargs: Any) -> Any:
         return mock_config
 
-    monkeypatch.setattr(config_mod, "get_config", get_mock)
-    monkeypatch.setattr(config_show, "get_config", get_mock)
+    # Patch get_config in cli module where it's imported and used
+    monkeypatch.setattr(cli_mod, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--format", "json", "--section", "nonexistent"])
 
@@ -401,9 +392,6 @@ def test_when_config_is_invoked_with_section_showing_complex_values(
     clear_config_cache: None,
 ) -> None:
     """Verify human format with section containing lists and dicts."""
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
     test_data = {
         "email": {
             "smtp_hosts": ["smtp1.test.com:587", "smtp2.test.com:587"],
@@ -417,8 +405,8 @@ def test_when_config_is_invoked_with_section_showing_complex_values(
     def get_mock(**_kwargs: Any) -> Any:
         return mock_config
 
-    monkeypatch.setattr(config_mod, "get_config", get_mock)
-    monkeypatch.setattr(config_show, "get_config", get_mock)
+    # Patch get_config in cli module where it's imported and used
+    monkeypatch.setattr(cli_mod, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--section", "email"])
 
@@ -439,9 +427,6 @@ def test_when_config_shows_all_sections_with_complex_values(
     clear_config_cache: None,
 ) -> None:
     """Verify human format showing all sections with lists and dicts."""
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
     test_data = {
         "email": {
             "smtp_hosts": ["smtp.test.com:587"],
@@ -457,8 +442,8 @@ def test_when_config_shows_all_sections_with_complex_values(
     def get_mock(**_kwargs: Any) -> Any:
         return mock_config
 
-    monkeypatch.setattr(config_mod, "get_config", get_mock)
-    monkeypatch.setattr(config_show, "get_config", get_mock)
+    # Patch get_config in cli module where it's imported and used
+    monkeypatch.setattr(cli_mod, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config"])
 
@@ -607,9 +592,6 @@ def test_when_config_is_invoked_with_profile_it_passes_profile_to_get_config(
     clear_config_cache: None,
 ) -> None:
     """Verify config command passes --profile to get_config."""
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
     captured_profiles: list[str | None] = []
     test_data = {"test_section": {"key": "value"}}
     mock_config = mock_config_factory(test_data)
@@ -618,8 +600,8 @@ def test_when_config_is_invoked_with_profile_it_passes_profile_to_get_config(
         captured_profiles.append(profile)
         return mock_config
 
-    monkeypatch.setattr(config_mod, "get_config", get_mock)
-    monkeypatch.setattr(config_show, "get_config", get_mock)
+    # Patch get_config in cli module where it's imported and used
+    monkeypatch.setattr(cli_mod, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--profile", "staging"])
 
@@ -635,9 +617,6 @@ def test_when_config_is_invoked_without_profile_it_passes_none(
     clear_config_cache: None,
 ) -> None:
     """Verify config command passes None when no --profile specified."""
-    from bitranox_template_cli_app_config_log_mail import config as config_mod
-    from bitranox_template_cli_app_config_log_mail import config_show
-
     captured_profiles: list[str | None] = []
     test_data = {"test_section": {"key": "value"}}
     mock_config = mock_config_factory(test_data)
@@ -646,8 +625,8 @@ def test_when_config_is_invoked_without_profile_it_passes_none(
         captured_profiles.append(profile)
         return mock_config
 
-    monkeypatch.setattr(config_mod, "get_config", get_mock)
-    monkeypatch.setattr(config_show, "get_config", get_mock)
+    # Patch get_config in cli module where it's imported and used
+    monkeypatch.setattr(cli_mod, "get_config", get_mock)
 
     result: Result = cli_runner.invoke(cli_mod.cli, ["config"])
 
