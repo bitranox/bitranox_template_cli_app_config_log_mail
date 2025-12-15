@@ -12,7 +12,7 @@ the [Keep a Changelog](https://keepachangelog.com/) format.
 - Updated ruff target-version from py313 to py310
 - Added Python 3.10, 3.11, 3.12, 3.13 classifiers to pyproject.toml
 - Expanded CI test matrix to cover Python 3.10, 3.11, 3.12, 3.13
-- Replaced `tomllib` with `rtoml` in CI workflows for Python 3.10 compatibility
+- Replaced `tomllib` with `rtoml` in CI workflows and tests for Python 3.10 compatibility
 
 ## [0.2.2] - 2025-12-15
 
