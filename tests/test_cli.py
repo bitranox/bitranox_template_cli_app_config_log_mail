@@ -284,8 +284,8 @@ def test_when_config_is_invoked_with_json_format_it_outputs_json(cli_runner: Cli
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--format", "json"])
 
     assert result.exit_code == 0
-    # JSON output should be valid (empty object if no config)
-    assert "{" in result.output
+    # Use result.stdout to avoid async log messages from stderr
+    assert "{" in result.stdout
 
 
 @pytest.mark.os_agnostic
@@ -294,7 +294,7 @@ def test_when_config_is_invoked_with_nonexistent_section_it_fails(cli_runner: Cl
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--section", "nonexistent_section_that_does_not_exist"])
 
     assert result.exit_code != 0
-    assert "not found or empty" in result.output
+    assert "not found or empty" in result.stderr
 
 
 @pytest.mark.os_agnostic
@@ -381,7 +381,7 @@ def test_when_config_is_invoked_with_json_format_and_nonexistent_section_it_fail
     result: Result = cli_runner.invoke(cli_mod.cli, ["config", "--format", "json", "--section", "nonexistent"])
 
     assert result.exit_code != 0
-    assert "not found or empty" in result.output
+    assert "not found or empty" in result.stderr
 
 
 @pytest.mark.os_agnostic
@@ -523,8 +523,8 @@ def test_when_config_deploy_encounters_permission_error_it_handles_gracefully(
     result: Result = cli_runner.invoke(cli_mod.cli, ["config-deploy", "--target", "app"])
 
     assert result.exit_code != 0
-    assert "Permission denied" in result.output
-    assert "sudo" in result.output.lower()
+    assert "Permission denied" in result.stderr
+    assert "sudo" in result.stderr.lower()
 
 
 @pytest.mark.os_agnostic

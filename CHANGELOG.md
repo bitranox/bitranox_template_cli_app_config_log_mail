@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file following
 the [Keep a Changelog](https://keepachangelog.com/) format.
 
 
+## [0.2.4] - 2025-12-27
+
+### Fixed
+- Intermittent test failures on Windows (Python 3.10/3.11) when parsing JSON output from `config --format json`
+- Tests now use `result.stdout` instead of `result.output` to avoid async log messages from `lib_log_rich` contaminating JSON output
+- Error message assertions now correctly use `result.stderr` for messages written with `err=True`
 
 ## [0.2.3] - 2025-12-15
 

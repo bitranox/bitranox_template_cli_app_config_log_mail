@@ -80,7 +80,12 @@ def _restore_cli_config(snapshot: dict[str, object]) -> None:
 
 @pytest.fixture
 def cli_runner() -> CliRunner:
-    """Provide a fresh CliRunner per test."""
+    """Provide a fresh CliRunner per test.
+
+    Click 8.x provides separate result.stdout and result.stderr attributes.
+    Use result.stdout for clean output (e.g., JSON parsing) to avoid
+    async log messages from stderr contaminating the output.
+    """
     return CliRunner()
 
 
